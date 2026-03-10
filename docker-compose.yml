@@ -10,12 +10,24 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U gbg -d gbggridlock"]
       interval: 5s
       timeout: 3s
       retries: 15
+
+  db-migrate:
+    image: sqitch/sqitch:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles: ["tools"]
+    volumes:
+      - ./db:/work:ro
+    working_dir: /work
+    environment:
+      SQITCH_TARGET: db:pg://gbg:gbg@db:5432/gbggridlock
+    command: ["deploy", "db:pg://gbg:gbg@db:5432/gbggridlock"]
 
 volumes:
   pgdata:
