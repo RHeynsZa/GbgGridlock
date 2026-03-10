@@ -7,7 +7,7 @@ GbgGridlock is a real-time analytics dashboard for visualizing transit pain poin
 - `worker/` – Async polling ingestion service (Planera Resa v4 -> TimescaleDB)
 - `backend/` – FastAPI aggregation API for dashboard consumption
 - `frontend/` – React dashboard UI (wall of shame, route deep dive, health indicator)
-- `db/` – SQL bootstrap scripts (schema + hypertable)
+- `db/` – Sqitch migrations for TimescaleDB schema lifecycle
 
 ## Quick start
 
@@ -15,6 +15,7 @@ GbgGridlock is a real-time analytics dashboard for visualizing transit pain poin
 
 ```bash
 docker compose up -d db
+docker compose run --rm --profile tools db-migrate
 ```
 
 ### 2) Backend API
