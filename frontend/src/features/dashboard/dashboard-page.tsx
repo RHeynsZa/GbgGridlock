@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   Area,
   AreaChart,
@@ -15,6 +16,7 @@ import {
 import { BusFront, Ship, TramFront } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { fetchLineColors } from '@/lib/api'
 
 type CorridorMetric = {
   corridor: string
@@ -83,9 +85,25 @@ const lineDrilldown: LineDrilldown[] = [
 
 const pieColors = ['#5B8FF9', '#5AD8A6', '#5D7092']
 
+const fallbackLineColors: Record<string, string> = {
+  '5': '#7A2E8E',
+  '6': '#F28E00',
+  '11': '#61267A',
+  '16': '#0A74DA',
+  '19': '#1F9D55',
+  X4: '#EA4335',
+  '286': '#008CA8',
+  '287': '#005F73',
+}
+
 export function DashboardPage() {
   const [selectedMode, setSelectedMode] = useState<'All' | LineDrilldown['mode']>('All')
   const [selectedLine, setSelectedLine] = useState<string | null>(null)
+
+  const lineColorsQuery = useQuery({
+    queryKey: ['line-colors'],
+    queryFn: fetchLineColors,
+  })
 
   const avgDelay = useMemo(
     () => Math.round(corridorMetrics.reduce((sum, corridor) => sum + corridor.avgDelaySeconds, 0) / corridorMetrics.length),
@@ -107,6 +125,14 @@ export function DashboardPage() {
     [filteredLines, selectedLine],
   )
 
+  const lineColors = useMemo(() => {
+    const fromApi = Object.fromEntries((lineColorsQuery.data ?? []).map((row) => [row.lineNumber, row.hexColor]))
+    return {
+      ...fallbackLineColors,
+      ...fromApi,
+    }
+  }, [lineColorsQuery.data])
+
   const lineDelayRanking = useMemo(
     () => [...lineDrilldown].sort((a, b) => b.avgDelaySeconds - a.avgDelaySeconds),
     [],
@@ -125,6 +151,8 @@ export function DashboardPage() {
 
     return <TramFront className="h-4 w-4" />
   }
+
+  const getLineColor = (lineNumber: string) => lineColors[lineNumber] ?? 'var(--chart-1)'
 
   return (
     <main className="container mx-auto grid max-w-6xl gap-5 p-6">
@@ -185,8 +213,8 @@ export function DashboardPage() {
                     </p>
                     <div className="relative h-9 rounded-md bg-muted/60">
                       <div
-                        className="flex h-full items-center justify-end rounded-md bg-[var(--chart-1)] pr-2 text-white"
-                        style={{ width: `${widthPercent}%` }}
+                        className="flex h-full items-center justify-end rounded-md pr-2 text-white"
+                        style={{ width: `${widthPercent}%`, backgroundColor: getLineColor(line.line) }}
                       >
                         <span className="rounded-full bg-black/20 p-1">{getModeIcon(line.mode)}</span>
                       </div>
@@ -196,6 +224,11 @@ export function DashboardPage() {
                 )
               })}
             </div>
+            <p className="text-xs text-muted-foreground">
+              {lineColorsQuery.data && lineColorsQuery.data.length > 0
+                ? 'Line colors loaded from the official source endpoint.'
+                : 'Using local fallback line colors until the official endpoint is configured.'}
+            </p>
           </CardContent>
         </Card>
 
@@ -276,6 +309,7 @@ export function DashboardPage() {
                 <button
                   key={line.line}
                   className="rounded-md border px-2 py-1 text-sm"
+                  style={{ borderColor: getLineColor(line.line) }}
                   onClick={() => setSelectedLine(line.line)}
                 >
                   {line.mode} {line.line}
