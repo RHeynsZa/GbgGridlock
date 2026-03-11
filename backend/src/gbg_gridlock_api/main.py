@@ -1,14 +1,20 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 from fastapi import FastAPI, Query
 
 from .config import Settings
 from .database import Database
-from .schemas import BottleneckStop, DelayDistributionBucket, WorstLine
+from .schemas import BottleneckStop, DelayDistributionBucket, LineMetadata, WorstLine
 
 settings = Settings()
 db = Database(settings.database_url)
 app = FastAPI(title="GbgGridlock API", version="0.1.0")
+
+_line_metadata_cache: list[LineMetadata] = []
+_line_metadata_cache_expiry: datetime | None = None
+LINE_METADATA_CACHE_TTL_SECONDS = 300
 
 
 @app.on_event("startup")
@@ -77,3 +83,29 @@ async def get_bottlenecks(window_minutes: int = Query(default=1440, ge=5, le=100
     async with db.pool.acquire() as conn:
         rows = await conn.fetch(sql, window_minutes, limit)
     return [BottleneckStop(**dict(row)) for row in rows]
+
+
+@app.get("/api/v1/lines/metadata", response_model=list[LineMetadata])
+async def get_line_metadata() -> list[LineMetadata]:
+    global _line_metadata_cache, _line_metadata_cache_expiry
+
+    now = datetime.now(timezone.utc)
+    if _line_metadata_cache_expiry and now < _line_metadata_cache_expiry:
+        return _line_metadata_cache
+
+    sql = """
+    SELECT line_number,
+           foreground_color,
+           background_color,
+           text_color,
+           border_color
+    FROM line_metadata
+    ORDER BY line_number
+    """
+    async with db.pool.acquire() as conn:
+        rows = await conn.fetch(sql)
+
+    _line_metadata_cache = [LineMetadata(**dict(row)) for row in rows]
+    _line_metadata_cache_expiry = now + timedelta(seconds=LINE_METADATA_CACHE_TTL_SECONDS)
+
+    return _line_metadata_cache

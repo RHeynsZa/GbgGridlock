@@ -3,3 +3,4 @@
 %uri=https://example.com/gbggridlock
 
 001_base_schema 2026-03-10T00:00:00Z codex <codex@example.com> # baseline schema for delay events
+002_line_metadata 2026-03-11T00:00:00Z agent <agent@example.com> # line metadata for colors and symbols
