@@ -119,11 +119,7 @@ async def test_run_poll_cycle_fetches_all_stops_and_inserts_events(monkeypatch):
         captured["conn"] = conn
         captured["events"] = list(events)
 
-    async def fake_upsert_line_metadata(conn, lines):
-        captured["lines"] = list(lines)
-
     monkeypatch.setattr(main, "insert_events", fake_insert_events)
-    monkeypatch.setattr(main, "upsert_line_metadata", fake_upsert_line_metadata)
     monkeypatch.setattr(main, "TARGET_STOP_AREA_GIDS", ["stop-1", "stop-2"])
 
     settings = SimpleNamespace(http_concurrency=2)
@@ -135,6 +131,25 @@ async def test_run_poll_cycle_fetches_all_stops_and_inserts_events(monkeypatch):
     assert len(captured["events"]) == 2
     assert {event.stop_gid for event in captured["events"]} == {"stop-1", "stop-2"}
     assert all(event.delay_seconds == 60 for event in captured["events"])
+
+
+@pytest.mark.asyncio
+async def test_fetch_line_metadata_once_caches_all_lines_on_startup(monkeypatch):
+    captured = {}
+
+    async def fake_upsert_line_metadata(conn, lines):
+        captured["conn"] = conn
+        captured["lines"] = list(lines)
+
+    monkeypatch.setattr(main, "upsert_line_metadata", fake_upsert_line_metadata)
+    monkeypatch.setattr(main, "TARGET_STOP_AREA_GIDS", ["stop-1", "stop-2"])
+
+    settings = SimpleNamespace(http_concurrency=2)
+    pool = FakePool()
+
+    await main.fetch_line_metadata_once(settings=settings, pool=pool, vt_client=FakeClient())
+
+    assert captured["conn"] is pool.conn
     assert len(captured["lines"]) == 2
     assert all(line.line_number == "3" for line in captured["lines"])
     assert all(line.background_color == "00FF00" for line in captured["lines"])

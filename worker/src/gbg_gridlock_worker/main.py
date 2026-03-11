@@ -96,32 +96,51 @@ def _extract_line_metadata(payload: dict) -> list[LineMetadata]:
     return list(lines_seen.values())
 
 
+async def fetch_line_metadata_once(settings: Settings, pool: asyncpg.Pool, vt_client: VasttrafikClient) -> None:
+    semaphore = asyncio.Semaphore(settings.http_concurrency)
+
+    async with httpx.AsyncClient() as http_client:
+        async def fetch_metadata_for_stop(stop_gid: str) -> list[LineMetadata]:
+            async with semaphore:
+                try:
+                    payload = await vt_client.fetch_departures(http_client, stop_gid)
+                    return _extract_line_metadata(payload)
+                except Exception as exc:
+                    logger.warning("metadata fetch failed for stop %s: %s", stop_gid, exc)
+                    return []
+
+        result_sets = await asyncio.gather(*(fetch_metadata_for_stop(stop_gid) for stop_gid in TARGET_STOP_AREA_GIDS))
+
+    all_lines = [item for line_list in result_sets for item in line_list]
+
+    async with pool.acquire() as conn:
+        await upsert_line_metadata(conn, all_lines)
+
+    logger.info("startup line metadata fetch complete: cached %s line metadata entries", len(all_lines))
+
+
 async def run_poll_cycle(settings: Settings, pool: asyncpg.Pool, vt_client: VasttrafikClient) -> None:
     semaphore = asyncio.Semaphore(settings.http_concurrency)
     recorded_at = datetime.now(timezone.utc)
 
     async with httpx.AsyncClient() as http_client:
-        async def fetch_for_stop(stop_gid: str) -> tuple[list[DepartureDelayEvent], list[LineMetadata]]:
+        async def fetch_for_stop(stop_gid: str) -> list[DepartureDelayEvent]:
             async with semaphore:
                 try:
                     payload = await vt_client.fetch_departures(http_client, stop_gid)
-                    events = _extract_events(stop_gid, payload, recorded_at)
-                    lines = _extract_line_metadata(payload)
-                    return events, lines
+                    return _extract_events(stop_gid, payload, recorded_at)
                 except Exception as exc:
                     logger.warning("poll failed for stop %s: %s", stop_gid, exc)
-                    return [], []
+                    return []
 
         result_sets = await asyncio.gather(*(fetch_for_stop(stop_gid) for stop_gid in TARGET_STOP_AREA_GIDS))
 
-    events = [item for event_list, _ in result_sets for item in event_list]
-    all_lines = [item for _, line_list in result_sets for item in line_list]
+    events = [item for event_list in result_sets for item in event_list]
 
     async with pool.acquire() as conn:
         await insert_events(conn, events)
-        await upsert_line_metadata(conn, all_lines)
 
-    logger.info("poll cycle complete: inserted %s events and %s line metadata entries", len(events), len(all_lines))
+    logger.info("poll cycle complete: inserted %s events", len(events))
 
 
 async def main() -> None:
@@ -134,6 +153,9 @@ async def main() -> None:
     )
 
     pool = await asyncpg.create_pool(settings.database_url, min_size=1, max_size=5)
+    
+    await fetch_line_metadata_once(settings, pool, vt_client)
+    
     scheduler = AsyncIOScheduler()
     scheduler.add_job(run_poll_cycle, "interval", seconds=settings.poll_interval_seconds, args=[settings, pool, vt_client])
 
