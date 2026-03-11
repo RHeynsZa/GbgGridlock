@@ -11,6 +11,14 @@ export type LineColor = {
   hexColor: string
 }
 
+export type LineMetadata = {
+  line_number: string
+  foreground_color: string | null
+  background_color: string | null
+  text_color: string | null
+  border_color: string | null
+}
+
 type WorstLinesResponse = WorstLine[] | { rows?: WorstLine[]; data?: WorstLine[] }
 
 const api = axios.create({
@@ -39,20 +47,11 @@ export async function fetchWorstLines() {
   return normalizeWorstLines(data)
 }
 
-type LineColorsResponse =
-  | LineColor[]
-  | {
-      rows?: Array<{ line_number?: string; lineNumber?: string; color?: string; hexColor?: string }>
-      data?: Array<{ line_number?: string; lineNumber?: string; color?: string; hexColor?: string }>
-    }
-
-function normalizeLineColors(payload: LineColorsResponse): LineColor[] {
-  const rows = Array.isArray(payload) ? payload : Array.isArray(payload.rows) ? payload.rows : payload.data ?? []
-
-  return rows
-    .map((row) => {
-      const lineNumber = 'lineNumber' in row ? row.lineNumber : row.line_number
-      const hexColor = 'hexColor' in row ? row.hexColor : row.color
+function normalizeLineMetadata(metadata: LineMetadata[]): LineColor[] {
+  return metadata
+    .map((line) => {
+      const lineNumber = line.line_number
+      const hexColor = line.background_color || line.foreground_color
 
       if (!lineNumber || !hexColor) {
         return null
@@ -60,22 +59,18 @@ function normalizeLineColors(payload: LineColorsResponse): LineColor[] {
 
       return {
         lineNumber,
-        hexColor,
+        hexColor: hexColor.startsWith('#') ? hexColor : `#${hexColor}`,
       }
     })
     .filter((entry): entry is LineColor => Boolean(entry))
 }
 
 export async function fetchLineColors() {
-  const lineColorsEndpoint = import.meta.env.VITE_LINE_COLORS_ENDPOINT
-
-  if (!lineColorsEndpoint) {
+  try {
+    const { data } = await api.get<LineMetadata[]>('/api/v1/lines/metadata')
+    return normalizeLineMetadata(data)
+  } catch (error) {
+    console.warn('Failed to fetch line metadata from backend:', error)
     return []
   }
-
-  const { data } = await axios.get<LineColorsResponse>(lineColorsEndpoint, {
-    timeout: 10_000,
-  })
-
-  return normalizeLineColors(data)
 }

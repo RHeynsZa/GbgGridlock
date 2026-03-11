@@ -74,3 +74,51 @@ async def test_bottlenecks_endpoint_returns_schema_payload(monkeypatch):
             "total_departures": 34,
         }
     ]
+
+
+@pytest.mark.asyncio
+async def test_line_metadata_endpoint_returns_cached_colors(monkeypatch):
+    conn = FakeConn(
+        rows=[
+            {
+                "line_number": "5",
+                "foreground_color": "FFFFFF",
+                "background_color": "FF0000",
+                "text_color": None,
+                "border_color": None,
+            },
+            {
+                "line_number": "11",
+                "foreground_color": "000000",
+                "background_color": "FFFF00",
+                "text_color": "333333",
+                "border_color": "CCCCCC",
+            },
+        ]
+    )
+    monkeypatch.setattr(main.db, "_pool", FakePool(conn))
+    main._line_metadata_cache = []
+    main._line_metadata_cache_expiry = None
+
+    async with AsyncClient(transport=ASGITransport(app=main.app), base_url="http://test") as client:
+        response = await client.get("/api/v1/lines/metadata")
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "line_number": "5",
+            "foreground_color": "FFFFFF",
+            "background_color": "FF0000",
+            "text_color": None,
+            "border_color": None,
+        },
+        {
+            "line_number": "11",
+            "foreground_color": "000000",
+            "background_color": "FFFF00",
+            "text_color": "333333",
+            "border_color": "CCCCCC",
+        },
+    ]
+    assert len(main._line_metadata_cache) == 2
+    assert main._line_metadata_cache_expiry is not None

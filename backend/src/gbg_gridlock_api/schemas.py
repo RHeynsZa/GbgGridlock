@@ -16,3 +16,11 @@ class BottleneckStop(BaseModel):
     stop_gid: str
     severe_or_cancelled_count: int
     total_departures: int
+
+
+class LineMetadata(BaseModel):
+    line_number: str
+    foreground_color: str | None = None
+    background_color: str | None = None
+    text_color: str | None = None
+    border_color: str | None = None

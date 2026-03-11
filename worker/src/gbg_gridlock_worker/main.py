@@ -9,8 +9,8 @@ import httpx
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from .config import Settings, TARGET_STOP_AREA_GIDS
-from .models import DepartureDelayEvent
-from .repository import insert_events
+from .models import DepartureDelayEvent, LineMetadata
+from .repository import insert_events, upsert_line_metadata
 from .vasttrafik_client import VasttrafikClient
 
 logging.basicConfig(level=logging.INFO)
@@ -66,6 +66,59 @@ def _extract_events(stop_gid: str, payload: dict, recorded_at: datetime) -> list
     return events
 
 
+def _extract_line_metadata(payload: dict) -> list[LineMetadata]:
+    departures = payload.get("results") or payload.get("departures") or []
+    lines_seen: dict[str, LineMetadata] = {}
+
+    for dep in departures:
+        line_obj = dep.get("serviceJourney", {}).get("line") or dep.get("line") or {}
+        line_number = line_obj.get("shortName") or line_obj.get("name")
+        
+        if not line_number:
+            continue
+
+        if line_number in lines_seen:
+            continue
+
+        foreground_color = line_obj.get("foregroundColor") or line_obj.get("fgColor")
+        background_color = line_obj.get("backgroundColor") or line_obj.get("bgColor")
+        text_color = line_obj.get("textColor")
+        border_color = line_obj.get("borderColor")
+
+        lines_seen[line_number] = LineMetadata(
+            line_number=str(line_number),
+            foreground_color=str(foreground_color) if foreground_color else None,
+            background_color=str(background_color) if background_color else None,
+            text_color=str(text_color) if text_color else None,
+            border_color=str(border_color) if border_color else None,
+        )
+
+    return list(lines_seen.values())
+
+
+async def fetch_line_metadata_once(settings: Settings, pool: asyncpg.Pool, vt_client: VasttrafikClient) -> None:
+    semaphore = asyncio.Semaphore(settings.http_concurrency)
+
+    async with httpx.AsyncClient() as http_client:
+        async def fetch_metadata_for_stop(stop_gid: str) -> list[LineMetadata]:
+            async with semaphore:
+                try:
+                    payload = await vt_client.fetch_departures(http_client, stop_gid)
+                    return _extract_line_metadata(payload)
+                except Exception as exc:
+                    logger.warning("metadata fetch failed for stop %s: %s", stop_gid, exc)
+                    return []
+
+        result_sets = await asyncio.gather(*(fetch_metadata_for_stop(stop_gid) for stop_gid in TARGET_STOP_AREA_GIDS))
+
+    all_lines = [item for line_list in result_sets for item in line_list]
+
+    async with pool.acquire() as conn:
+        await upsert_line_metadata(conn, all_lines)
+
+    logger.info("startup line metadata fetch complete: cached %s line metadata entries", len(all_lines))
+
+
 async def run_poll_cycle(settings: Settings, pool: asyncpg.Pool, vt_client: VasttrafikClient) -> None:
     semaphore = asyncio.Semaphore(settings.http_concurrency)
     recorded_at = datetime.now(timezone.utc)
@@ -82,7 +135,7 @@ async def run_poll_cycle(settings: Settings, pool: asyncpg.Pool, vt_client: Vast
 
         result_sets = await asyncio.gather(*(fetch_for_stop(stop_gid) for stop_gid in TARGET_STOP_AREA_GIDS))
 
-    events = [item for sub in result_sets for item in sub]
+    events = [item for event_list in result_sets for item in event_list]
 
     async with pool.acquire() as conn:
         await insert_events(conn, events)
@@ -100,6 +153,9 @@ async def main() -> None:
     )
 
     pool = await asyncpg.create_pool(settings.database_url, min_size=1, max_size=5)
+    
+    await fetch_line_metadata_once(settings, pool, vt_client)
+    
     scheduler = AsyncIOScheduler()
     scheduler.add_job(run_poll_cycle, "interval", seconds=settings.poll_interval_seconds, args=[settings, pool, vt_client])
 
