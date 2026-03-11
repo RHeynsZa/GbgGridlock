@@ -52,3 +52,47 @@ The UI layer visualizing the transit pain points.
   * **UI Components:** Use `shadcn/ui` components structured with Tailwind CSS utility classes. Avoid writing custom CSS files.
   * **Data Flow:** Do not make any direct calls to the Västtrafik API from the browser. All data must flow exclusively through the FastAPI backend.
   * **Visualizations:** Charts (via Recharts or similar) must correctly handle and visualize right-skewed statistical distributions, as transit delays cannot drop below zero but can extend indefinitely.
+
+---
+
+## Cursor Cloud specific instructions
+
+### Services overview
+
+| Service | Stack | Port | Start command |
+|---------|-------|------|---------------|
+| TimescaleDB | Docker (`timescale/timescaledb:latest-pg16`) | 5432 | See below |
+| Backend API | Python 3.12 / FastAPI / asyncpg | 8000 | `cd backend && uvicorn gbg_gridlock_api.main:app --reload --port 8000` |
+| Frontend | React 18 / Vite / TypeScript | 5173 | `cd frontend && VITE_API_BASE_URL=http://localhost:8000 npm run dev` |
+| Ingestion Worker | Python 3.12 / httpx / APScheduler | N/A | Optional; needs `VT_CLIENT_ID` / `VT_CLIENT_SECRET` secrets |
+
+### Starting TimescaleDB (Docker-in-Docker gotcha)
+
+The standard `docker compose up -d db` fails in nested container environments because the TimescaleDB `timescaledb-tune` init script panics when it cannot read `/sys/fs/cgroup/memory.max`. Use `docker run` directly with `NO_TS_TUNE=true`:
+
+```bash
+docker run -d --name gbggridlock-db \
+  -e POSTGRES_USER=gbg -e POSTGRES_PASSWORD=gbg -e POSTGRES_DB=gbggridlock \
+  -e NO_TS_TUNE=true \
+  -p 5432:5432 \
+  timescale/timescaledb:latest-pg16
+```
+
+After it is healthy (`docker exec gbggridlock-db pg_isready -U gbg -d gbggridlock`), apply the migration manually:
+
+```bash
+docker exec -i gbggridlock-db psql -U gbg -d gbggridlock < /workspace/db/deploy/001_base_schema.sql
+```
+
+### Running tests
+
+* **Backend:** `cd backend && python3 -m pytest tests/ -v` (uses monkeypatched fakes; no DB needed)
+* **Worker:** `cd worker && python3 -m pytest tests/ -v` (uses monkeypatched fakes; no DB needed)
+* **Frontend build:** `cd frontend && npm run build` (Vite build; verifies compilation)
+* **Frontend E2E:** `cd frontend && npx playwright test` (requires `npx playwright install chromium` first; uses preview server on port 4173)
+
+### Notes
+
+* Backend `.env` file: copy `backend/.env.example` to `backend/.env` (default `DATABASE_URL` works with the local Docker DB).
+* `npx tsc --noEmit` in the frontend reports errors about `import.meta.env` because the repo is missing `vite/client` types; this is a pre-existing issue and does not affect Vite builds.
+* The frontend needs `VITE_API_BASE_URL=http://localhost:8000` at dev-server start time to reach the backend (Vite env vars are compile-time only).
