@@ -2,8 +2,6 @@ import { useMemo, useState } from 'react'
 import {
   Area,
   AreaChart,
-  Bar,
-  BarChart,
   CartesianGrid,
   Cell,
   Legend,
@@ -14,6 +12,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { BusFront, Ship, TramFront } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -108,6 +107,25 @@ export function DashboardPage() {
     [filteredLines, selectedLine],
   )
 
+  const lineDelayRanking = useMemo(
+    () => [...lineDrilldown].sort((a, b) => b.avgDelaySeconds - a.avgDelaySeconds),
+    [],
+  )
+
+  const maxLineDelay = lineDelayRanking[0]?.avgDelaySeconds ?? 1
+
+  const getModeIcon = (mode: LineDrilldown['mode']) => {
+    if (mode === 'Bus') {
+      return <BusFront className="h-4 w-4" />
+    }
+
+    if (mode === 'Ferry') {
+      return <Ship className="h-4 w-4" />
+    }
+
+    return <TramFront className="h-4 w-4" />
+  }
+
   return (
     <main className="container mx-auto grid max-w-6xl gap-5 p-6">
       <header className="space-y-2">
@@ -152,20 +170,31 @@ export function DashboardPage() {
       <section className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Corridor pressure map</CardTitle>
-            <CardDescription>Delay seconds by strategic transfer node.</CardDescription>
+            <CardTitle>Line delay ranking</CardTitle>
+            <CardDescription>Horizontal delay bars per line, with transport icons at each bar endpoint.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="h-[280px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={corridorMetrics}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="corridor" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="avgDelaySeconds" fill="var(--chart-1)" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+          <CardContent className="space-y-3">
+            <div className="space-y-2">
+              {lineDelayRanking.map((line) => {
+                const widthPercent = Math.max(8, Math.round((line.avgDelaySeconds / maxLineDelay) * 100))
+
+                return (
+                  <div key={line.line} className="grid grid-cols-[70px_1fr_50px] items-center gap-2">
+                    <p className="text-sm font-medium">
+                      {line.mode} {line.line}
+                    </p>
+                    <div className="relative h-9 rounded-md bg-muted/60">
+                      <div
+                        className="flex h-full items-center justify-end rounded-md bg-[var(--chart-1)] pr-2 text-white"
+                        style={{ width: `${widthPercent}%` }}
+                      >
+                        <span className="rounded-full bg-black/20 p-1">{getModeIcon(line.mode)}</span>
+                      </div>
+                    </div>
+                    <p className="text-right text-sm font-medium">{line.avgDelaySeconds}s</p>
+                  </div>
+                )
+              })}
             </div>
           </CardContent>
         </Card>
