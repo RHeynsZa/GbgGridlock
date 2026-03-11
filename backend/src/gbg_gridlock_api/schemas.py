@@ -18,6 +18,10 @@ class BottleneckStop(BaseModel):
     total_departures: int
 
 
+class MonitoredStop(BaseModel):
+    stop_gid: str
+
+
 class LineMetadata(BaseModel):
     line_number: str
     foreground_color: str | None = None

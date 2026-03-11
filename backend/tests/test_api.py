@@ -27,7 +27,7 @@ class FakePool:
         yield self.conn
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_worst_lines_endpoint_uses_query_params_and_returns_rows(monkeypatch):
     conn = FakeConn(
         rows=[
@@ -50,7 +50,7 @@ async def test_worst_lines_endpoint_uses_query_params_and_returns_rows(monkeypat
     assert args == (30, 2)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_bottlenecks_endpoint_returns_schema_payload(monkeypatch):
     conn = FakeConn(
         rows=[
@@ -76,7 +76,7 @@ async def test_bottlenecks_endpoint_returns_schema_payload(monkeypatch):
     ]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_line_metadata_endpoint_returns_cached_colors(monkeypatch):
     conn = FakeConn(
         rows=[
@@ -122,3 +122,30 @@ async def test_line_metadata_endpoint_returns_cached_colors(monkeypatch):
     ]
     assert len(main._line_metadata_cache) == 2
     assert main._line_metadata_cache_expiry is not None
+
+
+@pytest.mark.anyio
+async def test_delay_breakdown_by_stop_uses_stop_filter_when_provided(monkeypatch):
+    conn = FakeConn(rows=[{"line_number": "16", "avg_delay_seconds": 111.1, "sample_size": 8}])
+    monkeypatch.setattr(main.db, "_pool", FakePool(conn))
+
+    async with AsyncClient(transport=ASGITransport(app=main.app), base_url="http://test") as client:
+        response = await client.get("/api/v1/delays/by-stop", params={"window_minutes": 30, "stop_gid": "9021014001760000"})
+
+    assert response.status_code == 200
+    assert response.json() == [{"line_number": "16", "avg_delay_seconds": 111.1, "sample_size": 8}]
+    assert len(conn.calls) == 1
+    _, args = conn.calls[0]
+    assert args == (30, "9021014001760000")
+
+
+@pytest.mark.anyio
+async def test_monitored_stops_endpoint_returns_distinct_stop_ids(monkeypatch):
+    conn = FakeConn(rows=[{"stop_gid": "9021014001760000"}, {"stop_gid": "9021014001950000"}])
+    monkeypatch.setattr(main.db, "_pool", FakePool(conn))
+
+    async with AsyncClient(transport=ASGITransport(app=main.app), base_url="http://test") as client:
+        response = await client.get("/api/v1/stops/monitored")
+
+    assert response.status_code == 200
+    assert response.json() == [{"stop_gid": "9021014001760000"}, {"stop_gid": "9021014001950000"}]

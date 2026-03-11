@@ -19,6 +19,10 @@ export type LineMetadata = {
   border_color: string | null
 }
 
+export type MonitoredStop = {
+  stop_gid: string
+}
+
 type WorstLinesResponse = WorstLine[] | { rows?: WorstLine[]; data?: WorstLine[] }
 
 const api = axios.create({
@@ -42,9 +46,16 @@ function normalizeWorstLines(payload: WorstLinesResponse): WorstLine[] {
   return []
 }
 
-export async function fetchWorstLines() {
-  const { data } = await api.get<WorstLinesResponse>('/api/v1/delays/worst-lines')
+export async function fetchWorstLines(stopGid?: string) {
+  const { data } = await api.get<WorstLinesResponse>('/api/v1/delays/by-stop', {
+    params: stopGid ? { stop_gid: stopGid } : undefined,
+  })
   return normalizeWorstLines(data)
+}
+
+export async function fetchMonitoredStops() {
+  const { data } = await api.get<MonitoredStop[]>('/api/v1/stops/monitored')
+  return data
 }
 
 function normalizeLineMetadata(metadata: LineMetadata[]): LineColor[] {
