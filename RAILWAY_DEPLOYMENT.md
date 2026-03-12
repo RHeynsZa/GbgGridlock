@@ -49,11 +49,12 @@ Railway will automatically detect the `railway.toml` configuration file and:
 The deployment process runs migrations automatically via the `preDeployCommand` in `railway.toml`:
 
 ```toml
-preDeployCommand = "cd backend && python migrate.py"
+[deploy]
+preDeployCommand = ["cd backend && python migrate.py"]
 startCommand = "cd backend && uvicorn gbg_gridlock_api.main:app --host 0.0.0.0 --port $PORT"
 ```
 
-The pre-deploy command runs between building and deploying the application, ensuring migrations complete before the service starts.
+The pre-deploy command runs between building and deploying the application, ensuring migrations complete before the service starts. Note that `preDeployCommand` uses array syntax as per Railway's config-as-code reference.
 
 The `migrate.py` script:
 1. Connects to the database using `DATABASE_URL`
