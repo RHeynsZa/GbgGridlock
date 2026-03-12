@@ -1,11 +1,11 @@
 [build]
-builder = "nixpacks"
-buildCommand = "apt-get update && apt-get install -y sqitch libdbd-pg-perl postgresql-client && cd backend && pip install -e ."
+builder = "NIXPACKS"
+buildCommand = "apt-get update && apt-get install -y python3 python3-pip sqitch libdbd-pg-perl postgresql-client && python3 -m pip install --no-cache-dir -e backend"
 
 [deploy]
 preDeployCommand = ["cd db && sqitch deploy $DATABASE_URL"]
-startCommand = "cd backend && uvicorn gbg_gridlock_api.main:app --host 0.0.0.0 --port $PORT"
+startCommand = "cd backend && python3 -m uvicorn gbg_gridlock_api.main:app --host 0.0.0.0 --port $PORT"
 healthcheckPath = "/health"
 healthcheckTimeout = 100
-restartPolicyType = "on_failure"
+restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
