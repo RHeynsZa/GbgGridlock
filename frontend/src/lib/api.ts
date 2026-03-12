@@ -6,9 +6,11 @@ export type WorstLine = {
   sample_size: number
 }
 
-export type LineColor = {
+export type LineStyle = {
   lineNumber: string
-  hexColor: string
+  backgroundColor: string
+  textColor: string
+  borderColor: string
 }
 
 export type LineMetadata = {
@@ -85,22 +87,32 @@ export async function fetchMonitoredStops() {
   }
 }
 
-function normalizeLineMetadata(metadata: LineMetadata[]): LineColor[] {
+function normalizeHex(value: string | null | undefined) {
+  if (!value) {
+    return null
+  }
+
+  return value.startsWith('#') ? value : `#${value}`
+}
+
+function normalizeLineMetadata(metadata: LineMetadata[]): LineStyle[] {
   return metadata
     .map((line) => {
       const lineNumber = line.line_number
-      const hexColor = line.background_color || line.foreground_color
+      const backgroundColor = normalizeHex(line.background_color) ?? normalizeHex(line.foreground_color)
 
-      if (!lineNumber || !hexColor) {
+      if (!lineNumber || !backgroundColor) {
         return null
       }
 
       return {
         lineNumber,
-        hexColor: hexColor.startsWith('#') ? hexColor : `#${hexColor}`,
+        backgroundColor,
+        textColor: normalizeHex(line.text_color) ?? '#FFFFFF',
+        borderColor: normalizeHex(line.border_color) ?? backgroundColor,
       }
     })
-    .filter((entry): entry is LineColor => Boolean(entry))
+    .filter((entry): entry is LineStyle => Boolean(entry))
 }
 
 export async function fetchLineColors() {
