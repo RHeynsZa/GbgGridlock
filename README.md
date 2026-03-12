@@ -62,6 +62,21 @@ After the workflow runs, your dashboard is served from:
 For local frontend development without analytics, no secrets are required.
 
 
+
+## Testing checklist
+
+When you change code in a component, run that component's checks before opening a PR:
+
+- **Backend changes:** `cd backend && PYTHONPATH=src python3 -m pytest tests/ -v`
+- **Worker changes:** `cd worker && PYTHONPATH=src python3 -m pytest tests/ -v`
+- **Frontend changes (required):**
+  - `cd frontend && npm run build`
+  - `cd frontend && npx playwright install chromium` (first run only)
+  - `cd frontend && npx playwright install-deps chromium` (CI/container environments)
+  - `cd frontend && npm run test:e2e`
+
+The frontend smoke test runs against the built preview app, so running only `npm run build` is not sufficient when UI code changes.
+
 ## Notes
 
 - The worker uses OAuth2 client credentials and caches tokens until near expiry.
