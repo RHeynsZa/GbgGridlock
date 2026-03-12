@@ -39,10 +39,11 @@ Add the following environment variables to your Railway service:
 
 Railway will automatically detect the `railway.toml` configuration file and:
 
-1. Install Python and system dependencies (including Sqitch)
-2. **Run database migrations automatically** before starting the service
-3. Start the FastAPI application with uvicorn
-4. Enable health checks at `/health`
+1. Install system dependencies (including Sqitch and curl)
+2. Install `uv` and sync backend dependencies from `backend/pyproject.toml`
+3. **Run database migrations automatically** before starting the service
+4. Start the FastAPI application with `uv run uvicorn`
+5. Enable health checks at `/health`
 
 ## How Migrations Work
 
@@ -51,7 +52,7 @@ The deployment process runs migrations automatically via the `preDeployCommand` 
 ```toml
 [deploy]
 preDeployCommand = ["cd db && sqitch deploy $DATABASE_URL"]
-startCommand = "cd backend && python3 -m uvicorn gbg_gridlock_api.main:app --host 0.0.0.0 --port $PORT"
+startCommand = "export PATH=\"$HOME/.local/bin:$PATH\" && cd backend && uv run uvicorn gbg_gridlock_api.main:app --host 0.0.0.0 --port $PORT"
 ```
 
 The pre-deploy command runs between building and deploying the application, ensuring migrations complete before the service starts.
@@ -60,7 +61,7 @@ The pre-deploy command runs between building and deploying the application, ensu
 
 GbgGridlock uses [Sqitch](https://sqitch.org/) for database schema management:
 
-1. **Build Phase**: Python 3, pip, Sqitch, and PostgreSQL client tools are installed via `apt-get` during the build (important in monorepos where Nixpacks may not auto-detect Python)
+1. **Build Phase**: Sqitch/PostgreSQL client tools are installed via `apt-get`, then `uv` is installed via its official installer and used to sync backend dependencies from `backend/pyproject.toml`
 2. **Pre-Deploy Phase**: `sqitch deploy` runs all pending migrations from `db/deploy/` in order defined by `db/sqitch.plan`
 3. **Idempotent**: Sqitch tracks applied migrations in the database, only running new ones
 4. **Rollback Support**: Each migration has a corresponding revert script in `db/revert/`
@@ -105,7 +106,8 @@ Common causes:
 - TimescaleDB extension not available (should be automatic on Railway)
 - Database connection issues (verify `DATABASE_URL` is set correctly)
 - SQL syntax errors in migration files
-- Missing Sqitch dependencies (should be installed during build)
+- Missing Sqitch dependencies (installed during build)
+- `uv` is unavailable on `PATH` during start (the command now prepends `$HOME/.local/bin`)
 
 To troubleshoot locally:
 ```bash
@@ -153,7 +155,8 @@ To run locally with the same configuration:
 4. Start the server:
    ```bash
    cd backend
-   uvicorn gbg_gridlock_api.main:app --reload
+   uv sync
+   uv run uvicorn gbg_gridlock_api.main:app --reload
    ```
 
 ## Support
