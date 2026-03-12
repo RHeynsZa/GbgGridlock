@@ -1,13 +1,12 @@
-# Database migrations (Sqitch)
+# Database migrations
 
-The database schema is managed with [Sqitch](https://sqitch.org/) and lives in this folder.
+Schema migrations are now managed with **Alembic** from the backend service.
 
-## Files
+## Canonical migration files
 
-- `sqitch.plan` - migration plan and order.
-- `deploy/*.sql` - forward migrations.
-- `revert/*.sql` - rollback migrations.
-- `verify/*.sql` - validation checks.
+- `backend/alembic.ini` - Alembic runtime config.
+- `backend/alembic/env.py` - Alembic environment setup.
+- `backend/alembic/versions/*.py` - Versioned migration scripts.
 
 ## Local workflow
 
@@ -20,22 +19,16 @@ docker compose up -d db
 2. Apply migrations:
 
 ```bash
-docker compose run --rm --profile tools db-migrate
+cd backend && uv run alembic upgrade head
 ```
 
-3. Verify migrations:
+3. Roll back one migration (if needed):
 
 ```bash
-docker compose run --rm --profile tools db-migrate verify db:pg://gbg:gbg@db:5432/gbggridlock
-```
-
-4. Revert the latest migration (if needed):
-
-```bash
-docker compose run --rm --profile tools db-migrate revert db:pg://gbg:gbg@db:5432/gbggridlock
+cd backend && uv run alembic downgrade -1
 ```
 
 ## Notes
 
-- `init.sql` is intentionally a no-op placeholder now; schema setup is migration-driven.
-- The migration container runs only when explicitly invoked via the `tools` profile.
+- `db/init.sql` remains a no-op placeholder.
+- Legacy migration tooling has been removed from active workflows.

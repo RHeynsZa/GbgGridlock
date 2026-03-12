@@ -39,7 +39,7 @@ Add the following environment variables to your Railway service:
 
 Railway will automatically detect the `railway.toml` configuration file and:
 
-1. Install system dependencies (including Sqitch and curl)
+1. Install system dependencies (including curl)
 2. Install `uv` and sync backend dependencies from `backend/pyproject.toml`
 3. **Run database migrations automatically** before starting the service
 4. Start the FastAPI application with `uv run uvicorn`
@@ -51,28 +51,27 @@ The deployment process runs migrations automatically via the `preDeployCommand` 
 
 ```toml
 [deploy]
-preDeployCommand = ["cd db && sqitch deploy $DATABASE_URL"]
+preDeployCommand = ["export PATH=\"$HOME/.local/bin:$PATH\" && cd backend && uv run alembic upgrade head"]
 startCommand = "export PATH=\"$HOME/.local/bin:$PATH\" && cd backend && uv run uvicorn gbg_gridlock_api.main:app --host 0.0.0.0 --port $PORT"
 ```
 
 The pre-deploy command runs between building and deploying the application, ensuring migrations complete before the service starts.
 
-### Sqitch Migration System
+### Alembic Migration System
 
-GbgGridlock uses [Sqitch](https://sqitch.org/) for database schema management:
+GbgGridlock uses [Alembic](https://alembic.sqlalchemy.org/) for database schema management:
 
-1. **Build Phase**: Sqitch/PostgreSQL client tools are installed via `apt-get`, then `uv` is installed via its official installer and used to sync backend dependencies from `backend/pyproject.toml`
-2. **Pre-Deploy Phase**: `sqitch deploy` runs all pending migrations from `db/deploy/` in order defined by `db/sqitch.plan`
-3. **Idempotent**: Sqitch tracks applied migrations in the database, only running new ones
-4. **Rollback Support**: Each migration has a corresponding revert script in `db/revert/`
-5. **Verification**: Each migration includes a verify script in `db/verify/` for integrity checks
-6. **Failure Handling**: If any migration fails, Railway aborts the deployment
+1. **Build Phase**: System packages are installed via `apt-get`, then `uv` is installed via its official installer and used to sync backend dependencies from `backend/pyproject.toml`
+2. **Pre-Deploy Phase**: `uv run alembic upgrade head` runs all pending migrations from `backend/alembic/versions/`
+3. **Idempotent**: Alembic tracks applied revisions in `alembic_version`, only running new ones
+4. **Rollback Support**: Each migration has a corresponding `downgrade()` implementation
+5. **Failure Handling**: If any migration fails, Railway aborts the deployment
+
 
 Migration files are located in:
-- `db/sqitch.plan` - Migration plan and order
-- `db/deploy/*.sql` - Forward migrations
-- `db/revert/*.sql` - Rollback scripts
-- `db/verify/*.sql` - Validation checks
+- `backend/alembic.ini` - Alembic runtime config
+- `backend/alembic/env.py` - Alembic environment setup
+- `backend/alembic/versions/*.py` - Versioned migration scripts
 
 ## Monitoring
 
@@ -97,22 +96,22 @@ When enabled, the worker will:
 
 ### Migrations Failing
 
-Check Railway logs for Sqitch migration errors:
+Check Railway logs for Alembic migration errors:
 ```
-sqitch deploy failed
+alembic upgrade head failed
 ```
 
 Common causes:
 - TimescaleDB extension not available (should be automatic on Railway)
 - Database connection issues (verify `DATABASE_URL` is set correctly)
 - SQL syntax errors in migration files
-- Missing Sqitch dependencies (installed during build)
+- Missing Alembic dependencies (installed during build)
 - `uv` is unavailable on `PATH` during start (the command now prepends `$HOME/.local/bin`)
 
 To troubleshoot locally:
 ```bash
 docker compose up -d db
-docker compose run --rm --profile tools db-migrate
+cd backend && uv run alembic upgrade head
 ```
 
 ### Worker Not Starting
@@ -140,9 +139,9 @@ To run locally with the same configuration:
    docker compose up -d db
    ```
 
-2. Run migrations with Sqitch:
+2. Run migrations with Alembic:
    ```bash
-   docker compose run --rm --profile tools db-migrate
+   cd backend && uv run alembic upgrade head
    ```
 
 3. Configure the backend:
@@ -162,6 +161,6 @@ To run locally with the same configuration:
 ## Support
 
 - Railway Documentation: [docs.railway.com](https://docs.railway.com)
-- Sqitch Documentation: [sqitch.org](https://sqitch.org/)
+- Alembic Documentation: [alembic.sqlalchemy.org](https://alembic.sqlalchemy.org/)
 - TimescaleDB Docs: [docs.timescale.com](https://docs.timescale.com)
 - Västtrafik API: [developer.vasttrafik.se](https://developer.vasttrafik.se/)

@@ -1,3 +1,3 @@
--- Legacy bootstrap script kept for backward compatibility.
--- Schema management is now handled by Sqitch migrations in db/{deploy,revert,verify}.
-SELECT 'Use Sqitch migrations from db/sqitch.plan' AS message;
+-- No-op placeholder.
+-- Schema management is handled by Alembic migrations in backend/alembic/versions.
+SELECT 'Use Alembic migrations from backend/alembic' AS message;

@@ -1,9 +1,9 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "apt-get update && apt-get install -y curl sqitch libdbd-pg-perl postgresql-client && curl -LsSf https://astral.sh/uv/install.sh | sh && export PATH=\"$HOME/.local/bin:$PATH\" && cd backend && uv sync"
+buildCommand = "apt-get update && apt-get install -y curl postgresql-client && curl -LsSf https://astral.sh/uv/install.sh | sh && export PATH=\"$HOME/.local/bin:$PATH\" && cd backend && uv sync"
 
 [deploy]
-preDeployCommand = ["cd db && sqitch deploy $DATABASE_URL"]
+preDeployCommand = ["export PATH=\"$HOME/.local/bin:$PATH\" && cd backend && uv run alembic upgrade head"]
 startCommand = "export PATH=\"$HOME/.local/bin:$PATH\" && cd backend && uv run uvicorn gbg_gridlock_api.main:app --host 0.0.0.0 --port $PORT"
 healthcheckPath = "/health"
 healthcheckTimeout = 100
