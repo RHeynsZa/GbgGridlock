@@ -58,7 +58,7 @@ For production deployment to Railway with automatic migrations and integrated wo
 Quick Railway setup:
 - Connect your repo to Railway
 - Add TimescaleDB service
-- Set `VT_CLIENT_ID`, `VT_CLIENT_SECRET`, and `ENABLE_WORKER=true`
+- Set `VT_CLIENT_ID` and `VT_CLIENT_SECRET` (`ENABLE_WORKER` defaults to `true`)
 - Deploy automatically runs migrations and starts the API
 
 ### Deploy a fully static frontend (GitHub CDN)
