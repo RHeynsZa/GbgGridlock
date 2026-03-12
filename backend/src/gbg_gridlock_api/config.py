@@ -6,7 +6,7 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql://gbg:gbg@localhost:5432/gbggridlock"
     
-    enable_worker: bool = False
+    enable_worker: bool = True
     vt_client_id: str = ""
     vt_client_secret: str = ""
     vt_token_url: str = "https://ext-api.vasttrafik.se/token"
