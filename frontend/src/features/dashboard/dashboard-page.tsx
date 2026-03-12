@@ -16,7 +16,7 @@ import {
 import { BusFront, Ship, TramFront } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { fetchLineColors } from '@/lib/api'
+import { fetchLineColors, fetchMonitoredStops, fetchWorstLines } from '@/lib/api'
 
 type CorridorMetric = {
   corridor: string
@@ -99,10 +99,21 @@ const fallbackLineColors: Record<string, string> = {
 export function DashboardPage() {
   const [selectedMode, setSelectedMode] = useState<'All' | LineDrilldown['mode']>('All')
   const [selectedLine, setSelectedLine] = useState<string | null>(null)
+  const [selectedStop, setSelectedStop] = useState<string>('all')
 
   const lineColorsQuery = useQuery({
     queryKey: ['line-colors'],
     queryFn: fetchLineColors,
+  })
+
+  const monitoredStopsQuery = useQuery({
+    queryKey: ['monitored-stops'],
+    queryFn: fetchMonitoredStops,
+  })
+
+  const worstLinesQuery = useQuery({
+    queryKey: ['worst-lines-by-stop', selectedStop],
+    queryFn: () => fetchWorstLines(selectedStop === 'all' ? undefined : selectedStop),
   })
 
   const avgDelay = useMemo(
@@ -133,10 +144,19 @@ export function DashboardPage() {
     }
   }, [lineColorsQuery.data])
 
-  const lineDelayRanking = useMemo(
-    () => [...lineDrilldown].sort((a, b) => b.avgDelaySeconds - a.avgDelaySeconds),
-    [],
-  )
+  const lineDelayRanking = useMemo(() => {
+    if (worstLinesQuery.data && worstLinesQuery.data.length > 0) {
+      return [...worstLinesQuery.data]
+        .map((line) => ({
+          line: line.line_number,
+          mode: (line.line_number.startsWith('2') ? 'Ferry' : 'Bus') as LineDrilldown['mode'],
+          avgDelaySeconds: Math.round(line.avg_delay_seconds),
+        }))
+        .sort((a, b) => b.avgDelaySeconds - a.avgDelaySeconds)
+    }
+
+    return [...lineDrilldown].sort((a, b) => b.avgDelaySeconds - a.avgDelaySeconds)
+  }, [worstLinesQuery.data])
 
   const maxLineDelay = lineDelayRanking[0]?.avgDelaySeconds ?? 1
 
@@ -160,6 +180,34 @@ export function DashboardPage() {
         <h1 className="text-4xl font-bold tracking-tight">Västtrafik Pulse Dashboard</h1>
         <p className="text-muted-foreground">Interactive operations cockpit for delay, reliability, and drilldown analysis.</p>
       </header>
+
+      <Card className="border-amber-500/40 bg-amber-500/5">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Coverage limitation</CardTitle>
+          <CardDescription>
+            Real-time delay tracking is sampled from monitored chokepoint stops, not every stop in the network.
+            Use the stop filter below to inspect one monitored stop or keep the all-stop average view.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <label className="text-sm font-medium" htmlFor="stop-filter">
+            Stop filter
+          </label>
+          <select
+            id="stop-filter"
+            className="mt-2 w-full rounded-md border bg-background p-2 text-sm"
+            value={selectedStop}
+            onChange={(event) => setSelectedStop(event.target.value)}
+          >
+            <option value="all">All monitored stops (average)</option>
+            {(monitoredStopsQuery.data ?? []).map((stop) => (
+              <option key={stop.stop_gid} value={stop.stop_gid}>
+                {stop.stop_gid}
+              </option>
+            ))}
+          </select>
+        </CardContent>
+      </Card>
 
       <section className="grid gap-4 md:grid-cols-3">
         <Card>

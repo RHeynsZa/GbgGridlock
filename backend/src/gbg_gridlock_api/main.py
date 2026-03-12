@@ -6,7 +6,7 @@ from fastapi import FastAPI, Query
 
 from .config import Settings
 from .database import Database
-from .schemas import BottleneckStop, DelayDistributionBucket, LineMetadata, WorstLine
+from .schemas import BottleneckStop, DelayDistributionBucket, LineMetadata, MonitoredStop, WorstLine
 
 settings = Settings()
 db = Database(settings.database_url)
@@ -49,6 +49,50 @@ async def get_worst_lines(window_minutes: int = Query(default=60, ge=5, le=10080
     async with db.pool.acquire() as conn:
         rows = await conn.fetch(sql, window_minutes, limit)
     return [WorstLine(**dict(row)) for row in rows]
+
+
+@app.get("/api/v1/delays/by-stop", response_model=list[WorstLine])
+async def get_delay_breakdown_by_stop(
+    window_minutes: int = Query(default=60, ge=5, le=10080),
+    stop_gid: str | None = Query(default=None),
+) -> list[WorstLine]:
+    if stop_gid:
+        stop_filter = "AND stop_gid = $2"
+        params: tuple[object, ...] = (window_minutes, stop_gid)
+    else:
+        stop_filter = ""
+        params = (window_minutes,)
+
+    sql = f"""
+    SELECT line_number,
+           AVG(delay_seconds)::float AS avg_delay_seconds,
+           COUNT(*)::int AS sample_size
+    FROM departure_delay_events
+    WHERE recorded_at >= NOW() - ($1::int * INTERVAL '1 minute')
+      AND delay_seconds IS NOT NULL
+      {stop_filter}
+    GROUP BY line_number
+    HAVING COUNT(*) > 5
+    ORDER BY avg_delay_seconds DESC
+    """
+
+    async with db.pool.acquire() as conn:
+        rows = await conn.fetch(sql, *params)
+
+    return [WorstLine(**dict(row)) for row in rows]
+
+
+@app.get("/api/v1/stops/monitored", response_model=list[MonitoredStop])
+async def get_monitored_stops() -> list[MonitoredStop]:
+    sql = """
+    SELECT DISTINCT stop_gid
+    FROM departure_delay_events
+    ORDER BY stop_gid
+    """
+    async with db.pool.acquire() as conn:
+        rows = await conn.fetch(sql)
+
+    return [MonitoredStop(**dict(row)) for row in rows]
 
 
 @app.get("/api/v1/delays/distribution/{line_number}", response_model=list[DelayDistributionBucket])
