@@ -46,7 +46,22 @@ npm run dev
 
 Open `http://localhost:5173`.
 
-### 5) Deploy a fully static frontend (GitHub CDN)
+## Railway Deployment
+
+For production deployment to Railway with automatic migrations and integrated worker:
+
+1. See detailed instructions in [`RAILWAY_DEPLOYMENT.md`](./RAILWAY_DEPLOYMENT.md)
+2. The backend now includes the integrated polling worker (controlled by `ENABLE_WORKER` env var)
+3. Migrations run automatically before service startup via `railway.toml`
+4. TimescaleDB is provided natively by Railway
+
+Quick Railway setup:
+- Connect your repo to Railway
+- Add TimescaleDB service
+- Set `VT_CLIENT_ID`, `VT_CLIENT_SECRET`, and `ENABLE_WORKER=true`
+- Deploy automatically runs migrations and starts the API
+
+### Deploy a fully static frontend (GitHub CDN)
 
 The frontend is intentionally hardcoded so it can be shipped as static assets on GitHub Pages (GitHub's CDN-backed hosting). The included workflow `.github/workflows/frontend-pages.yml` builds `frontend/` and deploys `frontend/dist` on pushes to `main`.
 
