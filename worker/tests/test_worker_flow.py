@@ -111,7 +111,7 @@ class FakePool:
         yield self.conn
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_run_poll_cycle_fetches_all_stops_and_inserts_events(monkeypatch):
     captured = {}
 
@@ -133,7 +133,7 @@ async def test_run_poll_cycle_fetches_all_stops_and_inserts_events(monkeypatch):
     assert all(event.delay_seconds == 60 for event in captured["events"])
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_fetch_line_metadata_once_caches_all_lines_on_startup(monkeypatch):
     captured = {}
 
