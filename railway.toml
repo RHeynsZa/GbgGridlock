@@ -1,10 +1,10 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "apt-get update && apt-get install -y python3 python3-pip sqitch libdbd-pg-perl postgresql-client && python3 -m pip install --no-cache-dir -e backend"
+buildCommand = "apt-get update && apt-get install -y curl sqitch libdbd-pg-perl postgresql-client && curl -LsSf https://astral.sh/uv/install.sh | sh && export PATH=\"$HOME/.local/bin:$PATH\" && cd backend && uv sync"
 
 [deploy]
 preDeployCommand = ["cd db && sqitch deploy $DATABASE_URL"]
-startCommand = "cd backend && python3 -m uvicorn gbg_gridlock_api.main:app --host 0.0.0.0 --port $PORT"
+startCommand = "export PATH=\"$HOME/.local/bin:$PATH\" && cd backend && uv run uvicorn gbg_gridlock_api.main:app --host 0.0.0.0 --port $PORT"
 healthcheckPath = "/health"
 healthcheckTimeout = 100
 restartPolicyType = "ON_FAILURE"
