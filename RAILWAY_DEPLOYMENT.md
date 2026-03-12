@@ -50,18 +50,28 @@ The deployment process runs migrations automatically via the `preDeployCommand` 
 
 ```toml
 [deploy]
-preDeployCommand = ["cd backend && python migrate.py"]
+preDeployCommand = ["cd db && sqitch deploy $DATABASE_URL"]
 startCommand = "cd backend && uvicorn gbg_gridlock_api.main:app --host 0.0.0.0 --port $PORT"
 ```
 
-The pre-deploy command runs between building and deploying the application, ensuring migrations complete before the service starts. Note that `preDeployCommand` uses array syntax as per Railway's config-as-code reference.
+The pre-deploy command runs between building and deploying the application, ensuring migrations complete before the service starts.
 
-The `migrate.py` script:
-1. Connects to the database using `DATABASE_URL`
-2. Runs all SQL files in `db/deploy/` in alphabetical order
-3. Uses `CREATE TABLE IF NOT EXISTS` and similar idempotent patterns
-4. Exits with error code 1 if any migration fails (Railway will not start the service)
-5. Proceeds to start the API server only after successful migrations
+### Sqitch Migration System
+
+GbgGridlock uses [Sqitch](https://sqitch.org/) for database schema management:
+
+1. **Build Phase**: Sqitch and PostgreSQL client tools are installed via `apt-get` during the build
+2. **Pre-Deploy Phase**: `sqitch deploy` runs all pending migrations from `db/deploy/` in order defined by `db/sqitch.plan`
+3. **Idempotent**: Sqitch tracks applied migrations in the database, only running new ones
+4. **Rollback Support**: Each migration has a corresponding revert script in `db/revert/`
+5. **Verification**: Each migration includes a verify script in `db/verify/` for integrity checks
+6. **Failure Handling**: If any migration fails, Railway aborts the deployment
+
+Migration files are located in:
+- `db/sqitch.plan` - Migration plan and order
+- `db/deploy/*.sql` - Forward migrations
+- `db/revert/*.sql` - Rollback scripts
+- `db/verify/*.sql` - Validation checks
 
 ## Monitoring
 
@@ -86,15 +96,22 @@ When enabled, the worker will:
 
 ### Migrations Failing
 
-Check Railway logs for migration errors:
+Check Railway logs for Sqitch migration errors:
 ```
-ERROR: Migration 001_base_schema.sql failed: ...
+sqitch deploy failed
 ```
 
 Common causes:
 - TimescaleDB extension not available (should be automatic on Railway)
-- Database connection issues (verify `DATABASE_URL`)
-- SQL syntax errors
+- Database connection issues (verify `DATABASE_URL` is set correctly)
+- SQL syntax errors in migration files
+- Missing Sqitch dependencies (should be installed during build)
+
+To troubleshoot locally:
+```bash
+docker compose up -d db
+docker compose run --rm --profile tools db-migrate
+```
 
 ### Worker Not Starting
 
@@ -116,13 +133,32 @@ Railway will restart the service if `/health` doesn't respond. Check:
 
 To run locally with the same configuration:
 
-1. Copy `backend/.env.example` to `backend/.env`
-2. Set your local `DATABASE_URL` and Västtrafik credentials
-3. Run migrations: `python backend/migrate.py`
-4. Start the server: `cd backend && uvicorn gbg_gridlock_api.main:app --reload`
+1. Start the database:
+   ```bash
+   docker compose up -d db
+   ```
+
+2. Run migrations with Sqitch:
+   ```bash
+   docker compose run --rm --profile tools db-migrate
+   ```
+
+3. Configure the backend:
+   ```bash
+   cd backend
+   cp .env.example .env
+   # Edit .env with your DATABASE_URL and Västtrafik credentials
+   ```
+
+4. Start the server:
+   ```bash
+   cd backend
+   uvicorn gbg_gridlock_api.main:app --reload
+   ```
 
 ## Support
 
 - Railway Documentation: [docs.railway.com](https://docs.railway.com)
+- Sqitch Documentation: [sqitch.org](https://sqitch.org/)
 - TimescaleDB Docs: [docs.timescale.com](https://docs.timescale.com)
 - Västtrafik API: [developer.vasttrafik.se](https://developer.vasttrafik.se/)

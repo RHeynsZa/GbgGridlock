@@ -1,9 +1,9 @@
 [build]
 builder = "nixpacks"
-buildCommand = "cd backend && pip install -e ."
+buildCommand = "apt-get update && apt-get install -y sqitch libdbd-pg-perl postgresql-client && cd backend && pip install -e ."
 
 [deploy]
-preDeployCommand = ["cd backend && python migrate.py"]
+preDeployCommand = ["cd db && sqitch deploy $DATABASE_URL"]
 startCommand = "cd backend && uvicorn gbg_gridlock_api.main:app --host 0.0.0.0 --port $PORT"
 healthcheckPath = "/health"
 healthcheckTimeout = 100
