@@ -4,6 +4,10 @@ src/gbg_gridlock_api/config.py
 src/gbg_gridlock_api/database.py
 src/gbg_gridlock_api/main.py
 src/gbg_gridlock_api/schemas.py
+src/gbg_gridlock_api/vasttrafik_client.py
+src/gbg_gridlock_api/worker.py
+src/gbg_gridlock_api/worker_models.py
+src/gbg_gridlock_api/worker_repository.py
 src/gbg_gridlock_api.egg-info/PKG-INFO
 src/gbg_gridlock_api.egg-info/SOURCES.txt
 src/gbg_gridlock_api.egg-info/dependency_links.txt

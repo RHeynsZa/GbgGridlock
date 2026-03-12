@@ -7,3 +7,5 @@ Requires-Dist: asyncpg>=0.29.0
 Requires-Dist: fastapi>=0.111.0
 Requires-Dist: pydantic-settings>=2.3.0
 Requires-Dist: uvicorn>=0.30.0
+Requires-Dist: apscheduler>=3.10.4
+Requires-Dist: httpx>=0.27.0

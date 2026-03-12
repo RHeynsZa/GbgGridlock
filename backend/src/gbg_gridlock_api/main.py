@@ -1,30 +1,77 @@
 from __future__ import annotations
 
+import logging
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, Query
 
 from .config import Settings
 from .database import Database
 from .schemas import BottleneckStop, DelayDistributionBucket, LineMetadata, MonitoredStop, WorstLine
+from .vasttrafik_client import VasttrafikClient
+from .worker import fetch_line_metadata_once, run_poll_cycle
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 settings = Settings()
 db = Database(settings.database_url)
-app = FastAPI(title="GbgGridlock API", version="0.1.0")
 
 _line_metadata_cache: list[LineMetadata] = []
 _line_metadata_cache_expiry: datetime | None = None
 LINE_METADATA_CACHE_TTL_SECONDS = 300
 
+scheduler: AsyncIOScheduler | None = None
+vt_client: VasttrafikClient | None = None
 
-@app.on_event("startup")
-async def on_startup() -> None:
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global scheduler, vt_client
+    
     await db.connect()
-
-
-@app.on_event("shutdown")
-async def on_shutdown() -> None:
+    logger.info("Database connection established")
+    
+    if settings.enable_worker:
+        if not settings.vt_client_id or not settings.vt_client_secret:
+            logger.error("Worker enabled but VT_CLIENT_ID or VT_CLIENT_SECRET not set")
+        else:
+            vt_client = VasttrafikClient(
+                token_url=settings.vt_token_url,
+                api_base_url=settings.vt_api_base_url,
+                client_id=settings.vt_client_id,
+                client_secret=settings.vt_client_secret,
+            )
+            
+            await fetch_line_metadata_once(db.pool, vt_client, settings.worker_http_concurrency)
+            
+            scheduler = AsyncIOScheduler()
+            scheduler.add_job(
+                run_poll_cycle,
+                "interval",
+                seconds=settings.worker_interval_seconds,
+                args=[db.pool, vt_client, settings.worker_http_concurrency],
+            )
+            
+            await run_poll_cycle(db.pool, vt_client, settings.worker_http_concurrency)
+            scheduler.start()
+            logger.info("Worker scheduler started at %s second interval", settings.worker_interval_seconds)
+    else:
+        logger.info("Worker disabled (ENABLE_WORKER not set to true)")
+    
+    yield
+    
+    if scheduler:
+        scheduler.shutdown(wait=False)
+        logger.info("Worker scheduler shut down")
+    
     await db.disconnect()
+    logger.info("Database connection closed")
+
+
+app = FastAPI(title="GbgGridlock API", version="0.1.0", lifespan=lifespan)
 
 
 @app.get("/health")
