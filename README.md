@@ -14,9 +14,21 @@ GbgGridlock is a real-time analytics dashboard for visualizing transit pain poin
 ### 1) Database
 
 ```bash
+# Preferred on normal hosts
 docker compose up -d db
+
+# If running inside a nested container where compose fails on timescaledb-tune,
+# use this instead:
+docker run -d --name gbggridlock-db \
+  -e POSTGRES_USER=gbg -e POSTGRES_PASSWORD=gbg -e POSTGRES_DB=gbggridlock \
+  -e NO_TS_TUNE=true \
+  -p 5432:5432 \
+  timescale/timescaledb:latest-pg16
+
 cd backend && uv run alembic upgrade head
 ```
+
+If Docker itself fails with `unshare: operation not permitted`, the host/container runtime is blocking required kernel features. In that case, run the DB step on a machine/runner with privileged Docker support.
 
 ### 2) Backend API
 
