@@ -43,6 +43,7 @@ async def lifespan(app: FastAPI):
                 api_base_url=settings.vt_api_base_url,
                 client_id=settings.vt_client_id,
                 client_secret=settings.vt_client_secret,
+                auth_key=settings.vt_auth_key,
             )
             
             await fetch_line_metadata_once(db.pool, vt_client, settings.worker_http_concurrency)

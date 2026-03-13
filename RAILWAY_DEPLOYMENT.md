@@ -29,6 +29,7 @@ Add the following environment variables to your Railway service:
 - `DATABASE_URL` - Automatically set by Railway's TimescaleDB service
 - `VT_CLIENT_ID` - Your Västtrafik API client ID
 - `VT_CLIENT_SECRET` - Your Västtrafik API client secret
+- `VT_AUTH_KEY` - Your Västtrafik auth key (required for Planera Resa v4 access)
 
 **Optional (Worker Configuration):**
 - `ENABLE_WORKER` - Set to `true` to enable background polling (default: `false`)
@@ -121,7 +122,7 @@ Check logs for:
 ERROR: Worker enabled but VT_CLIENT_ID or VT_CLIENT_SECRET not set
 ```
 
-Ensure both Västtrafik credentials are set in Railway environment variables.
+Ensure Västtrafik credentials and the auth key are set in Railway environment variables.
 
 ### Health Check Failures
 
