@@ -16,7 +16,17 @@ target_metadata = None
 
 
 def _database_url() -> str:
-    return os.getenv("DATABASE_URL", config.get_main_option("sqlalchemy.url"))
+    url = os.getenv("DATABASE_URL", config.get_main_option("sqlalchemy.url"))
+
+    # Railway commonly injects DATABASE_URL as postgres:// or postgresql://,
+    # which makes SQLAlchemy pick the psycopg2 dialect by default.
+    # This project ships psycopg3, so normalize the URL explicitly.
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql+psycopg://", 1)
+    if url.startswith("postgresql://") and "+" not in url.split("://", 1)[0]:
+        return url.replace("postgresql://", "postgresql+psycopg://", 1)
+
+    return url
 
 
 def run_migrations_offline() -> None:

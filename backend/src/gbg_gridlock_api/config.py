@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,3 +14,11 @@ class Settings(BaseSettings):
     vt_api_base_url: str = "https://ext-api.vasttrafik.se/pr/v4"
     worker_interval_seconds: int = 60
     worker_http_concurrency: int = 5
+
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def normalize_database_url(cls, value: str) -> str:
+        if isinstance(value, str) and value.startswith("postgres://"):
+            return value.replace("postgres://", "postgresql://", 1)
+        return value
