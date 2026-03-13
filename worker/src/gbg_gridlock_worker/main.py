@@ -150,6 +150,7 @@ async def main() -> None:
         api_base_url=settings.vt_api_base_url,
         client_id=settings.vt_client_id,
         client_secret=settings.vt_client_secret,
+        auth_key=settings.vt_auth_key,
     )
 
     pool = await asyncpg.create_pool(settings.database_url, min_size=1, max_size=5)

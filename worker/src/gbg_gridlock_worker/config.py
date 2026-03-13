@@ -1,3 +1,4 @@
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -6,6 +7,7 @@ class Settings(BaseSettings):
 
     vt_client_id: str
     vt_client_secret: str
+    vt_auth_key: str = Field(default="", validation_alias=AliasChoices("VT_AUTH_KEY", "VT_SUBSCRIPTION_KEY"))
     vt_token_url: str = "https://ext-api.vasttrafik.se/token"
     vt_api_base_url: str = "https://ext-api.vasttrafik.se/pr/v4"
     database_url: str = "postgresql://gbg:gbg@localhost:5432/gbggridlock"
