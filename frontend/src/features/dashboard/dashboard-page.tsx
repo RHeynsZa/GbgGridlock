@@ -335,9 +335,29 @@ export function DashboardPage() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                  <XAxis dataKey="hour" stroke="var(--muted-foreground)" />
+                  <XAxis 
+                    dataKey="hour" 
+                    stroke="var(--muted-foreground)"
+                    tickFormatter={(value) => {
+                      // Format "2026-03-14 08:00" to show only time for single day, or date+time for multi-day
+                      const parts = value.split(' ')
+                      if (parts.length === 2) {
+                        const [date, time] = parts
+                        // For single-day view, just show time; for multi-day, show short date + time
+                        const hourlyData = hourlyTrendQuery.data ?? []
+                        const uniqueDates = new Set(hourlyData.map((d) => d.hour.split(' ')[0]))
+                        return uniqueDates.size > 1 ? `${date.substring(5)} ${time.substring(0, 5)}` : time.substring(0, 5)
+                      }
+                      return value
+                    }}
+                  />
                   <YAxis stroke="var(--muted-foreground)" />
-                  <Tooltip />
+                  <Tooltip 
+                    labelFormatter={(value) => {
+                      // Show full date and time in tooltip
+                      return String(value).replace(' ', ' @ ')
+                    }}
+                  />
                   <Area type="monotone" dataKey="tram" name={translateMode('Tram')} stroke="#7E57FF" fill="url(#tramGradient)" strokeWidth={2} />
                   <Area type="monotone" dataKey="bus" name={translateMode('Bus')} stroke="#A06EFF" fill="url(#busGradient)" strokeWidth={2} />
                   <Area type="monotone" dataKey="ferry" name={translateMode('Ferry')} stroke="#C4AEFF" fill="url(#ferryGradient)" strokeWidth={2} />
