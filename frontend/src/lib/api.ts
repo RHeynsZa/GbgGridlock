@@ -26,6 +26,18 @@ export type MonitoredStop = {
   stop_name: string
 }
 
+export type DebugMetrics = {
+  window_minutes: number
+  monitored_stops_count: number
+  poll_requests_count_5m: number
+  successful_poll_requests_count_5m: number
+  average_api_response_time_ms_5m: number
+  success_rate_percent_5m: number
+  poll_cycles_count_5m: number
+  successful_stop_polls_count_5m: number
+  failed_stop_polls_count_5m: number
+}
+
 type WorstLinesResponse = WorstLine[] | { rows?: WorstLine[]; data?: WorstLine[] }
 type MonitoredStopsResponse = MonitoredStop[] | { rows?: MonitoredStop[]; data?: MonitoredStop[] }
 
@@ -123,5 +135,15 @@ export async function fetchLineColors() {
   } catch (error) {
     console.warn('Failed to fetch line metadata from backend:', error)
     return []
+  }
+}
+
+export async function fetchDebugMetrics() {
+  try {
+    const { data } = await api.get<DebugMetrics>('/api/v1/debug/metrics')
+    return data
+  } catch (error) {
+    console.warn('Failed to fetch debug metrics from backend:', error)
+    return null
   }
 }

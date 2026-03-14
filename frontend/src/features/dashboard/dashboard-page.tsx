@@ -5,7 +5,7 @@ import { ArrowUpRight, BusFront, Languages, Moon, Ship, Sun, TramFront, Triangle
 import { useTranslation } from 'react-i18next'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { fetchLineColors, fetchMonitoredStops, fetchWorstLines } from '@/lib/api'
+import { fetchDebugMetrics, fetchLineColors, fetchMonitoredStops, fetchWorstLines } from '@/lib/api'
 
 type LineMode = 'Tram' | 'Bus' | 'Ferry'
 
@@ -95,6 +95,11 @@ export function DashboardPage() {
   const worstLinesQuery = useQuery({
     queryKey: ['worst-lines-by-stop', selectedStop],
     queryFn: () => fetchWorstLines(selectedStop === 'all' ? undefined : selectedStop),
+  })
+  const debugMetricsQuery = useQuery({
+    queryKey: ['debug-metrics'],
+    queryFn: fetchDebugMetrics,
+    refetchInterval: 30_000,
   })
 
   const avgDelay = useMemo(
@@ -440,6 +445,45 @@ export function DashboardPage() {
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">{t('drilldown.empty')}</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Debug monitoring metrics</CardTitle>
+          <CardDescription>Rolling 5-minute live diagnostics for polling and API reliability.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {debugMetricsQuery.data ? (
+            <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+              <p>
+                <strong>Monitored stops:</strong> {debugMetricsQuery.data.monitored_stops_count}
+              </p>
+              <p>
+                <strong>Poll requests (5m):</strong> {debugMetricsQuery.data.poll_requests_count_5m}
+              </p>
+              <p>
+                <strong>Avg API response (5m):</strong> {Math.round(debugMetricsQuery.data.average_api_response_time_ms_5m)} ms
+              </p>
+              <p>
+                <strong>Success rate (5m):</strong> {debugMetricsQuery.data.success_rate_percent_5m.toFixed(1)}%
+              </p>
+              <p>
+                <strong>Poll cycles (5m):</strong> {debugMetricsQuery.data.poll_cycles_count_5m}
+              </p>
+              <p>
+                <strong>Successful stop polls (5m):</strong> {debugMetricsQuery.data.successful_stop_polls_count_5m}
+              </p>
+              <p>
+                <strong>Failed stop polls (5m):</strong> {debugMetricsQuery.data.failed_stop_polls_count_5m}
+              </p>
+              <p>
+                <strong>Window:</strong> {debugMetricsQuery.data.window_minutes} minutes
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Debug metrics are unavailable right now.</p>
           )}
         </CardContent>
       </Card>

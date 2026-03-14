@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from datetime import datetime, timezone
 
 import asyncpg
@@ -11,6 +12,7 @@ from .worker_models import DepartureDelayEvent, LineMetadata
 from .worker_repository import insert_events, upsert_line_metadata
 from .vasttrafik_client import VasttrafikClient
 from .monitored_stops import MONITORED_STOP_AREA_GIDS
+from .debug_metrics import record_poll_cycle, record_poll_request
 
 logger = logging.getLogger(__name__)
 
@@ -138,18 +140,26 @@ async def run_poll_cycle(pool: asyncpg.Pool, vt_client: VasttrafikClient, http_c
     recorded_at = datetime.now(timezone.utc)
 
     async with httpx.AsyncClient() as http_client:
-        async def fetch_for_stop(stop_gid: str) -> list[DepartureDelayEvent]:
+        async def fetch_for_stop(stop_gid: str) -> tuple[list[DepartureDelayEvent], bool]:
             async with semaphore:
+                started = time.perf_counter()
                 try:
                     payload = await vt_client.fetch_departures(http_client, stop_gid)
-                    return _extract_events(stop_gid, payload, recorded_at)
+                    duration_ms = (time.perf_counter() - started) * 1000
+                    record_poll_request(duration_ms=duration_ms, success=True, recorded_at=recorded_at)
+                    return _extract_events(stop_gid, payload, recorded_at), True
                 except Exception as exc:
+                    duration_ms = (time.perf_counter() - started) * 1000
+                    record_poll_request(duration_ms=duration_ms, success=False, recorded_at=recorded_at)
                     logger.warning("poll failed for stop %s: %s", stop_gid, exc)
-                    return []
+                    return [], False
 
         result_sets = await asyncio.gather(*(fetch_for_stop(stop_gid) for stop_gid in TARGET_STOP_AREA_GIDS))
 
-    events = [item for event_list in result_sets for item in event_list]
+    events = [item for event_list, _ in result_sets for item in event_list]
+    successful_stops = sum(1 for _, success in result_sets if success)
+    failed_stops = len(result_sets) - successful_stops
+    record_poll_cycle(successful_stops=successful_stops, failed_stops=failed_stops, recorded_at=recorded_at)
 
     async with pool.acquire() as conn:
         await insert_events(conn, events)

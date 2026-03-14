@@ -168,3 +168,38 @@ async def test_cors_preflight_allows_github_pages_origin():
 
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == "https://rheynsza.github.io"
+
+
+@pytest.mark.anyio
+async def test_debug_metrics_endpoint_returns_live_snapshot(monkeypatch):
+    monkeypatch.setattr(
+        main,
+        "get_snapshot",
+        lambda monitored_stops_count: {
+            "window_minutes": 5,
+            "monitored_stops_count": monitored_stops_count,
+            "poll_requests_count_5m": 30,
+            "successful_poll_requests_count_5m": 27,
+            "average_api_response_time_ms_5m": 412.8,
+            "success_rate_percent_5m": 90.0,
+            "poll_cycles_count_5m": 5,
+            "successful_stop_polls_count_5m": 27,
+            "failed_stop_polls_count_5m": 3,
+        },
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=main.app), base_url="http://test") as client:
+        response = await client.get("/api/v1/debug/metrics")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "window_minutes": 5,
+        "monitored_stops_count": 6,
+        "poll_requests_count_5m": 30,
+        "successful_poll_requests_count_5m": 27,
+        "average_api_response_time_ms_5m": 412.8,
+        "success_rate_percent_5m": 90.0,
+        "poll_cycles_count_5m": 5,
+        "successful_stop_polls_count_5m": 27,
+        "failed_stop_polls_count_5m": 3,
+    }
