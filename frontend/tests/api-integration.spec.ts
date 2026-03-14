@@ -1,6 +1,38 @@
 import { expect, test } from '@playwright/test'
 
 test.describe('API Integration Tests with Mocked Responses', () => {
+  test('page loads without JavaScript errors or initialization issues', async ({ page }) => {
+    const consoleErrors: string[] = []
+    const pageErrors: string[] = []
+
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') {
+        consoleErrors.push(msg.text())
+      }
+    })
+
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message)
+    })
+
+    await page.goto('/')
+    await page.waitForLoadState('domcontentloaded')
+    await page.waitForTimeout(2000)
+
+    expect(pageErrors, 'No page errors should occur during page load').toHaveLength(0)
+
+    const criticalErrors = consoleErrors.filter(
+      (error) =>
+        error.includes('before initialization') ||
+        error.includes('is not defined') ||
+        error.includes('Cannot access') ||
+        error.includes('ReferenceError') ||
+        error.includes('TypeError'),
+    )
+
+    expect(criticalErrors, `Critical JavaScript errors detected: ${criticalErrors.join(', ')}`).toHaveLength(0)
+  })
+
   test('makes network requests to all required API endpoints', async ({ page }) => {
     const apiRequests = {
       networkStats: false,
@@ -37,7 +69,7 @@ test.describe('API Integration Tests with Mocked Responses', () => {
     expect(apiRequests.debugMetrics, 'Debug metrics API was called').toBe(true)
   })
 
-  test('dashboard page structure renders correctly', async ({ page }) => {
+  test('dashboard page structure renders correctly without errors', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
@@ -46,6 +78,9 @@ test.describe('API Integration Tests with Mocked Responses', () => {
     const kpiCards = page.locator('[class*="kpi-card"]')
     const kpiCount = await kpiCards.count()
     expect(kpiCount).toBeGreaterThanOrEqual(4)
+
+    const titleElement = await page.locator('h1').textContent()
+    expect(titleElement).toBe('GbgGridlock')
   })
 
   test('verifies no hardcoded empty data arrays by checking for charts', async ({ page }) => {
@@ -55,7 +90,21 @@ test.describe('API Integration Tests with Mocked Responses', () => {
 
     const recharts = page.locator('[class*="recharts"]')
     const rechartsCount = await recharts.count()
-    
+
     expect(rechartsCount).toBeGreaterThan(0)
+  })
+
+  test('all critical dashboard sections are visible', async ({ page }) => {
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+    await page.waitForTimeout(1000)
+
+    await expect(page.locator('header').first()).toBeVisible()
+
+    const sections = await page.locator('section').count()
+    expect(sections).toBeGreaterThan(0)
+
+    const cards = await page.locator('[class*="card"]').count()
+    expect(cards).toBeGreaterThan(0)
   })
 })

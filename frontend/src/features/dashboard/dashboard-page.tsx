@@ -61,6 +61,22 @@ export function DashboardPage() {
   const [selectedStop, setSelectedStop] = useState<string>('all')
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => document.documentElement.classList.contains('dark'))
 
+  const mapTransportModeToLineMode = (transportMode: string | null | undefined): LineMode => {
+    if (!transportMode) {
+      return 'Bus'
+    }
+    
+    const normalized = transportMode.toLowerCase()
+    if (normalized === 'tram') {
+      return 'Tram'
+    }
+    if (normalized === 'ferry' || normalized === 'boat') {
+      return 'Ferry'
+    }
+    
+    return 'Bus'
+  }
+
   const lineColorsQuery = useQuery({ queryKey: ['line-colors'], queryFn: fetchLineColors })
   const monitoredStopsQuery = useQuery({ queryKey: ['monitored-stops'], queryFn: fetchMonitoredStops })
   const worstLinesQuery = useQuery({
@@ -139,22 +155,6 @@ export function DashboardPage() {
 
     return Object.fromEntries(entries)
   }, [lineColorsQuery.data])
-
-  const mapTransportModeToLineMode = (transportMode: string | null | undefined): LineMode => {
-    if (!transportMode) {
-      return 'Bus'
-    }
-    
-    const normalized = transportMode.toLowerCase()
-    if (normalized === 'tram') {
-      return 'Tram'
-    }
-    if (normalized === 'ferry' || normalized === 'boat') {
-      return 'Ferry'
-    }
-    
-    return 'Bus'
-  }
 
   const lineDelayRanking = useMemo(() => {
     if (worstLinesQuery.data && worstLinesQuery.data.length > 0) {
