@@ -54,6 +54,17 @@ const MOCK_DEBUG_METRICS = {
   failed_stop_polls_count_5m: 4,
 }
 
+const MOCK_DELAY_DISTRIBUTION = [
+  { bucket_seconds: 0, departures: 45 },
+  { bucket_seconds: 60, departures: 82 },
+  { bucket_seconds: 120, departures: 65 },
+  { bucket_seconds: 180, departures: 38 },
+  { bucket_seconds: 240, departures: 22 },
+  { bucket_seconds: 300, departures: 15 },
+  { bucket_seconds: 360, departures: 8 },
+  { bucket_seconds: 420, departures: 4 },
+]
+
 async function mockAllApiRoutes(page: Page) {
   await page.route('**/api/v1/stats/network*', (route: Route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_NETWORK_STATS) }),
@@ -82,6 +93,10 @@ async function mockAllApiRoutes(page: Page) {
   await page.route('**/api/v1/debug/metrics*', (route: Route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_DEBUG_METRICS) }),
   )
+
+  await page.route('**/api/v1/delays/distribution/*', (route: Route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_DELAY_DISTRIBUTION) }),
+  )
 }
 
 test.describe('API integration – mocked backend responses', () => {
@@ -103,7 +118,7 @@ test.describe('API integration – mocked backend responses', () => {
     expect(jsErrors).toEqual([])
   })
 
-  test('all seven API endpoints are called on page load', async ({ page }) => {
+  test('all eight API endpoints are called on page load', async ({ page }) => {
     const calledEndpoints = new Set<string>()
 
     page.on('request', (req) => {
@@ -115,12 +130,13 @@ test.describe('API integration – mocked backend responses', () => {
       if (url.includes('/api/v1/stops/monitored')) calledEndpoints.add('monitoredStops')
       if (url.includes('/api/v1/lines/metadata')) calledEndpoints.add('lineMetadata')
       if (url.includes('/api/v1/debug/metrics')) calledEndpoints.add('debugMetrics')
+      if (url.includes('/api/v1/delays/distribution')) calledEndpoints.add('delayDistribution')
     })
 
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    const expected = ['networkStats', 'hourlyTrend', 'lineDetails', 'worstLines', 'monitoredStops', 'lineMetadata', 'debugMetrics']
+    const expected = ['networkStats', 'hourlyTrend', 'lineDetails', 'worstLines', 'monitoredStops', 'lineMetadata', 'debugMetrics', 'delayDistribution']
     for (const endpoint of expected) {
       expect(calledEndpoints.has(endpoint), `${endpoint} API was called`).toBe(true)
     }
