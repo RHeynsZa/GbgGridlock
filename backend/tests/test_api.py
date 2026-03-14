@@ -321,3 +321,32 @@ async def test_line_details_endpoint_returns_comprehensive_metrics_per_line(monk
     assert len(conn.calls) == 1
     _, args = conn.calls[0]
     assert args == (180,)
+
+
+@pytest.mark.anyio
+async def test_delay_distribution_endpoint_returns_bucketed_delays(monkeypatch):
+    conn = FakeConn(
+        rows=[
+            {"bucket_seconds": 0, "departures": 145},
+            {"bucket_seconds": 60, "departures": 82},
+            {"bucket_seconds": 120, "departures": 34},
+            {"bucket_seconds": 180, "departures": 18},
+            {"bucket_seconds": 240, "departures": 9},
+        ]
+    )
+    monkeypatch.setattr(main.db, "_pool", FakePool(conn))
+
+    async with AsyncClient(transport=ASGITransport(app=main.app), base_url="http://test") as client:
+        response = await client.get("/api/v1/delays/distribution/5", params={"window_minutes": 360})
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {"bucket_seconds": 0, "departures": 145},
+        {"bucket_seconds": 60, "departures": 82},
+        {"bucket_seconds": 120, "departures": 34},
+        {"bucket_seconds": 180, "departures": 18},
+        {"bucket_seconds": 240, "departures": 9},
+    ]
+    assert len(conn.calls) == 1
+    _, args = conn.calls[0]
+    assert args == ("5", 360)
