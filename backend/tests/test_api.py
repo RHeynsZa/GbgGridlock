@@ -31,8 +31,8 @@ class FakePool:
 async def test_worst_lines_endpoint_uses_query_params_and_returns_rows(monkeypatch):
     conn = FakeConn(
         rows=[
-            {"line_number": "5", "avg_delay_seconds": 123.4, "sample_size": 7},
-            {"line_number": "2", "avg_delay_seconds": 88.0, "sample_size": 9},
+            {"line_number": "5", "avg_delay_seconds": 123.4, "sample_size": 7, "transport_mode": "tram"},
+            {"line_number": "2", "avg_delay_seconds": 88.0, "sample_size": 9, "transport_mode": "bus"},
         ]
     )
     monkeypatch.setattr(main.db, "_pool", FakePool(conn))
@@ -42,8 +42,8 @@ async def test_worst_lines_endpoint_uses_query_params_and_returns_rows(monkeypat
 
     assert response.status_code == 200
     assert response.json() == [
-        {"line_number": "5", "avg_delay_seconds": 123.4, "sample_size": 7},
-        {"line_number": "2", "avg_delay_seconds": 88.0, "sample_size": 9},
+        {"line_number": "5", "avg_delay_seconds": 123.4, "sample_size": 7, "transport_mode": "tram"},
+        {"line_number": "2", "avg_delay_seconds": 88.0, "sample_size": 9, "transport_mode": "bus"},
     ]
     assert len(conn.calls) == 1
     _, args = conn.calls[0]
@@ -86,6 +86,7 @@ async def test_line_metadata_endpoint_returns_cached_colors(monkeypatch):
                 "background_color": "FF0000",
                 "text_color": None,
                 "border_color": None,
+                "transport_mode": "tram",
             },
             {
                 "line_number": "11",
@@ -93,6 +94,7 @@ async def test_line_metadata_endpoint_returns_cached_colors(monkeypatch):
                 "background_color": "FFFF00",
                 "text_color": "333333",
                 "border_color": "CCCCCC",
+                "transport_mode": "tram",
             },
         ]
     )
@@ -111,6 +113,7 @@ async def test_line_metadata_endpoint_returns_cached_colors(monkeypatch):
             "background_color": "FF0000",
             "text_color": None,
             "border_color": None,
+            "transport_mode": "tram",
         },
         {
             "line_number": "11",
@@ -118,6 +121,7 @@ async def test_line_metadata_endpoint_returns_cached_colors(monkeypatch):
             "background_color": "FFFF00",
             "text_color": "333333",
             "border_color": "CCCCCC",
+            "transport_mode": "tram",
         },
     ]
     assert len(main._line_metadata_cache) == 2
@@ -126,14 +130,14 @@ async def test_line_metadata_endpoint_returns_cached_colors(monkeypatch):
 
 @pytest.mark.anyio
 async def test_delay_breakdown_by_stop_uses_stop_filter_when_provided(monkeypatch):
-    conn = FakeConn(rows=[{"line_number": "16", "avg_delay_seconds": 111.1, "sample_size": 8}])
+    conn = FakeConn(rows=[{"line_number": "16", "avg_delay_seconds": 111.1, "sample_size": 8, "transport_mode": "bus"}])
     monkeypatch.setattr(main.db, "_pool", FakePool(conn))
 
     async with AsyncClient(transport=ASGITransport(app=main.app), base_url="http://test") as client:
         response = await client.get("/api/v1/delays/by-stop", params={"window_minutes": 30, "stop_gid": "9021014001760000"})
 
     assert response.status_code == 200
-    assert response.json() == [{"line_number": "16", "avg_delay_seconds": 111.1, "sample_size": 8}]
+    assert response.json() == [{"line_number": "16", "avg_delay_seconds": 111.1, "sample_size": 8, "transport_mode": "bus"}]
     assert len(conn.calls) == 1
     _, args = conn.calls[0]
     assert args == (30, "9021014001760000")
