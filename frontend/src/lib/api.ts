@@ -29,7 +29,7 @@ type WorstLinesResponse = WorstLine[] | { rows?: WorstLine[]; data?: WorstLine[]
 type MonitoredStopsResponse = MonitoredStop[] | { rows?: MonitoredStop[]; data?: MonitoredStop[] }
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? '',
+  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'https://gbggridlock-production.up.railway.app',
   timeout: 10_000,
 })
 

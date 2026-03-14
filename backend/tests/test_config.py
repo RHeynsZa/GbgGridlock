@@ -20,3 +20,11 @@ def test_auth_key_prefers_vt_auth_key_env(monkeypatch):
     settings = Settings()
 
     assert settings.vt_auth_key == "auth-key"
+
+
+def test_default_cors_origins_include_github_pages_and_local_dev():
+    settings = Settings()
+
+    assert "https://rheynsza.github.io" in settings.cors_allowed_origins
+    assert "https://rheynsza.github.io/GbgGridlock" in settings.cors_allowed_origins
+    assert "http://localhost:5173" in settings.cors_allowed_origins
