@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import Settings
 from .database import Database
+from .monitored_stops import MONITORED_STOPS
 from .schemas import BottleneckStop, DelayDistributionBucket, LineMetadata, MonitoredStop, WorstLine
 from .vasttrafik_client import VasttrafikClient
 from .worker import fetch_line_metadata_once, run_poll_cycle
@@ -141,15 +142,7 @@ async def get_delay_breakdown_by_stop(
 
 @app.get("/api/v1/stops/monitored", response_model=list[MonitoredStop])
 async def get_monitored_stops() -> list[MonitoredStop]:
-    sql = """
-    SELECT DISTINCT stop_gid
-    FROM departure_delay_events
-    ORDER BY stop_gid
-    """
-    async with db.pool.acquire() as conn:
-        rows = await conn.fetch(sql)
-
-    return [MonitoredStop(**dict(row)) for row in rows]
+    return [MonitoredStop(stop_gid=stop.stop_gid, stop_name=stop.stop_name) for stop in MONITORED_STOPS]
 
 
 @app.get("/api/v1/delays/distribution/{line_number}", response_model=list[DelayDistributionBucket])

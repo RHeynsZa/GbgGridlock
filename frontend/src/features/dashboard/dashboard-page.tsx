@@ -273,14 +273,14 @@ export function DashboardPage() {
                 <option value="all">{t('filters.allStops')}</option>
                 {(monitoredStopsQuery.data ?? []).map((stop) => (
                   <option key={stop.stop_gid} value={stop.stop_gid}>
-                    {stop.stop_gid}
+                    {stop.stop_name}
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-              {(['All', 'Tram', 'Bus', 'Ferry'] as const).map((mode) => (
+              {(['All', 'Tram', 'Bus'] as const).map((mode) => (
                 <button
                   key={mode}
                   type="button"

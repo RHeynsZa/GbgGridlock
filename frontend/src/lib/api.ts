@@ -23,6 +23,7 @@ export type LineMetadata = {
 
 export type MonitoredStop = {
   stop_gid: string
+  stop_name: string
 }
 
 type WorstLinesResponse = WorstLine[] | { rows?: WorstLine[]; data?: WorstLine[] }

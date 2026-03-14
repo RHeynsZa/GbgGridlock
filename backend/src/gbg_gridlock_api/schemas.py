@@ -20,6 +20,7 @@ class BottleneckStop(BaseModel):
 
 class MonitoredStop(BaseModel):
     stop_gid: str
+    stop_name: str
 
 
 class LineMetadata(BaseModel):

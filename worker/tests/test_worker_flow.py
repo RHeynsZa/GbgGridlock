@@ -15,17 +15,18 @@ def test_extract_events_maps_departure_fields_and_skips_missing_planned_time():
         "results": [
             {
                 "serviceJourney": {"gid": "j-1", "line": {"shortName": "5"}},
+                "transportMode": "TRAM",
                 "plannedTime": "2026-01-01T10:00:00Z",
                 "estimatedTime": "2026-01-01T10:02:30Z",
                 "isCancelled": False,
             },
             {
                 "journey": {"gid": "j-2"},
-                "line": {"name": "Blue"},
+                "line": {"name": "Blue", "transportMode": "BUS"},
                 "scheduledTime": "2026-01-01T10:10:00Z",
                 "isCancelled": True,
             },
-            {"line": {"shortName": "skip-me"}},
+            {"line": {"shortName": "skip-me", "transportMode": "BOAT"}},
         ]
     }
 
@@ -49,37 +50,35 @@ def test_extract_line_metadata_deduplicates_and_maps_colors():
             {
                 "serviceJourney": {
                     "gid": "j-1",
-                    "line": {"shortName": "5", "foregroundColor": "FFFFFF", "backgroundColor": "FF0000"},
+                    "line": {"shortName": "5", "foregroundColor": "FFFFFF", "backgroundColor": "FF0000", "transportMode": "TRAM"},
                 },
                 "plannedTime": "2026-01-01T10:00:00Z",
             },
             {
                 "serviceJourney": {
                     "gid": "j-2",
-                    "line": {"shortName": "5", "foregroundColor": "FFFFFF", "backgroundColor": "FF0000"},
+                    "line": {"shortName": "5", "foregroundColor": "FFFFFF", "backgroundColor": "FF0000", "transportMode": "TRAM"},
                 },
                 "plannedTime": "2026-01-01T10:05:00Z",
             },
             {
-                "line": {"shortName": "11", "bgColor": "0000FF", "fgColor": "FFFFFF"},
+                "line": {"shortName": "11", "bgColor": "0000FF", "fgColor": "FFFFFF", "transportMode": "BUS"},
                 "plannedTime": "2026-01-01T10:10:00Z",
             },
-            {"line": {"name": "Express"}, "plannedTime": "2026-01-01T10:15:00Z"},
+            {"line": {"name": "Express", "transportMode": "FERRY"}, "plannedTime": "2026-01-01T10:15:00Z"},
         ]
     }
 
     lines = main._extract_line_metadata(payload)
 
-    assert len(lines) == 3
+    assert len(lines) == 2
     line_5 = next(line for line in lines if line.line_number == "5")
     assert line_5.foreground_color == "FFFFFF"
     assert line_5.background_color == "FF0000"
     line_11 = next(line for line in lines if line.line_number == "11")
     assert line_11.foreground_color == "FFFFFF"
     assert line_11.background_color == "0000FF"
-    line_express = next(line for line in lines if line.line_number == "Express")
-    assert line_express.foreground_color is None
-    assert line_express.background_color is None
+
 
 
 class FakeClient:
@@ -89,7 +88,7 @@ class FakeClient:
                 {
                     "serviceJourney": {
                         "gid": f"journey-{stop_gid}",
-                        "line": {"shortName": "3", "foregroundColor": "FFFFFF", "backgroundColor": "00FF00"},
+                        "line": {"shortName": "3", "foregroundColor": "FFFFFF", "backgroundColor": "00FF00", "transportMode": "BUS"},
                     },
                     "plannedTime": "2026-01-01T10:00:00Z",
                     "estimatedTime": "2026-01-01T10:01:00Z",
