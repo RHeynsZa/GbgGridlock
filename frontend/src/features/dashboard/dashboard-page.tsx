@@ -5,7 +5,7 @@ import { ArrowUpRight, BusFront, Languages, Moon, Ship, Sun, TramFront, Triangle
 import { useTranslation } from 'react-i18next'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { fetchDebugMetrics, fetchHourlyTrend, fetchLineColors, fetchLineDetails, fetchMonitoredStops, fetchNetworkStats, fetchWorstLines } from '@/lib/api'
+import { fetchDebugMetrics, fetchDelayDistribution, fetchHourlyTrend, fetchLineColors, fetchLineDetails, fetchMonitoredStops, fetchNetworkStats, fetchWorstLines } from '@/lib/api'
 
 type LineMode = 'Tram' | 'Bus' | 'Ferry'
 
@@ -32,13 +32,6 @@ type LineDrilldown = {
   crowdingScore: number
   canceledTrips: number
   onTimeRate: number
-}
-
-type DistributionPoint = {
-  mode: LineMode
-  p50: number
-  p85: number
-  p95: number
 }
 
 const fallbackLineStyles: Record<string, { backgroundColor: string; textColor: string; borderColor: string }> = {
@@ -99,6 +92,16 @@ export function DashboardPage() {
   const lineDetailsQuery = useQuery({
     queryKey: ['line-details'],
     queryFn: () => fetchLineDetails(60),
+  })
+
+  const delayDistributionQuery = useQuery({
+    queryKey: ['delay-distribution', selectedLine],
+    queryFn: () => {
+      const lineToFetch = selectedLine || worstLinesQuery.data?.[0]?.line_number
+      if (!lineToFetch) return Promise.resolve([])
+      return fetchDelayDistribution(lineToFetch, 1440)
+    },
+    enabled: !!(selectedLine || worstLinesQuery.data?.[0]?.line_number),
   })
 
   const avgDelay = useMemo(
@@ -170,27 +173,13 @@ export function DashboardPage() {
     return [...lineDrilldown].sort((a, b) => b.avgDelaySeconds - a.avgDelaySeconds)
   }, [worstLinesQuery.data])
 
-  const distributionByMode = useMemo<DistributionPoint[]>(() => {
-    return chartModeOrder.map((mode) => {
-      const values = lineDrilldown
-        .filter((line) => line.mode === mode)
-          .map((line) => line.avgDelaySeconds)
-          .sort((a, b) => a - b)
-
-      if (values.length === 0) {
-        return { mode, p50: 0, p85: 0, p95: 0 }
-      }
-
-      const percentile = (p: number) => values[Math.min(values.length - 1, Math.floor((values.length - 1) * p))]
-
-      return {
-        mode,
-        p50: percentile(0.5),
-        p85: percentile(0.85),
-        p95: percentile(0.95),
-      }
-    })
-  }, [])
+  const delayDistributionData = useMemo(() => {
+    const buckets = delayDistributionQuery.data || []
+    return buckets.map((bucket) => ({
+      delayRange: `${Math.floor(bucket.bucket_seconds / 60)}m`,
+      departures: bucket.departures,
+    }))
+  }, [delayDistributionQuery.data])
 
   const maxLineDelay = lineDelayRanking[0]?.avgDelaySeconds ?? 1
 
@@ -386,22 +375,33 @@ export function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>{t('charts.distributionTitle')}</CardTitle>
+            <CardTitle>
+              {t('charts.distributionTitle')}
+              {(selectedLine || worstLinesQuery.data?.[0]?.line_number) && (
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  (Line {selectedLine || worstLinesQuery.data?.[0]?.line_number})
+                </span>
+              )}
+            </CardTitle>
             <CardDescription>{t('charts.distributionDesc')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[300px] w-full sm:h-[320px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={distributionByMode} barCategoryGap="20%" barGap={6}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                  <XAxis dataKey="mode" tickFormatter={(value) => translateMode(value as LineMode)} stroke="var(--muted-foreground)" />
-                  <YAxis stroke="var(--muted-foreground)" />
-                  <Tooltip />
-                  <Bar dataKey="p50" name="P50" fill="#8B5CF6" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="p85" name="P85" fill="#6366F1" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="p95" name="P95" fill="#4338CA" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {delayDistributionData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={delayDistributionData} barCategoryGap="20%">
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                    <XAxis dataKey="delayRange" stroke="var(--muted-foreground)" />
+                    <YAxis stroke="var(--muted-foreground)" label={{ value: 'Departures', angle: -90, position: 'insideLeft' }} />
+                    <Tooltip />
+                    <Bar dataKey="departures" name="Departures" fill="#8B5CF6" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center text-muted-foreground">
+                  <p>{delayDistributionQuery.isLoading ? 'Loading...' : 'No delay distribution data available'}</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

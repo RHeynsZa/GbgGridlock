@@ -44,7 +44,7 @@ const resources = {
         colorsApi: 'Line colors loaded from official metadata endpoint.',
         colorsFallback: 'Line metadata is unavailable; neutral colors are shown until API color schema loads.',
         distributionTitle: 'Delay distribution (right-skew aware)',
-        distributionDesc: 'Compare P50, P85, and P95 delay percentiles by mode to expose long-tail risk.',
+        distributionDesc: 'Histogram showing the distribution of delays for the selected line, highlighting right-skewed patterns.',
       },
       drilldown: {
         title: 'Route drilldown panel',
@@ -101,7 +101,7 @@ const resources = {
         colorsApi: 'Linjefärger laddade från officiellt metadata-endpoint.',
         colorsFallback: 'Linjefärger från API saknas; neutrala färger visas tills färgschemat laddas.',
         distributionTitle: 'Fördelning av förseningar (högerskev)',
-        distributionDesc: 'Jämför P50, P85 och P95 per trafikslag för att synliggöra svansrisk.',
+        distributionDesc: 'Histogram som visar fördelningen av förseningar för den valda linjen och framhäver högersvans-mönster.',
       },
       drilldown: {
         title: 'Panel för linjeanalys',
