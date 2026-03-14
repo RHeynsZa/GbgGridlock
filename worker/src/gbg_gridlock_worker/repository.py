@@ -17,9 +17,10 @@ INSERT INTO departure_delay_events (
   estimated_time,
   delay_seconds,
   is_cancelled,
-  realtime_missing
+  realtime_missing,
+  transport_mode
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT (recorded_at, stop_gid, journey_gid) DO NOTHING
 """
 
@@ -30,18 +31,20 @@ INSERT INTO line_metadata (
   background_color,
   text_color,
   border_color,
+  transport_mode,
   last_seen_at,
   updated_at
 )
-VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
 ON CONFLICT (line_number) DO UPDATE SET
   foreground_color = COALESCE(EXCLUDED.foreground_color, line_metadata.foreground_color),
   background_color = COALESCE(EXCLUDED.background_color, line_metadata.background_color),
   text_color = COALESCE(EXCLUDED.text_color, line_metadata.text_color),
   border_color = COALESCE(EXCLUDED.border_color, line_metadata.border_color),
+  transport_mode = COALESCE(EXCLUDED.transport_mode, line_metadata.transport_mode),
   last_seen_at = NOW(),
   updated_at = CASE
-    WHEN COALESCE(EXCLUDED.foreground_color, EXCLUDED.background_color, EXCLUDED.text_color, EXCLUDED.border_color) IS NOT NULL
+    WHEN COALESCE(EXCLUDED.foreground_color, EXCLUDED.background_color, EXCLUDED.text_color, EXCLUDED.border_color, EXCLUDED.transport_mode) IS NOT NULL
     THEN NOW()
     ELSE line_metadata.updated_at
   END
@@ -60,6 +63,7 @@ async def insert_events(conn: asyncpg.Connection, events: Iterable[DepartureDela
             event.delay_seconds,
             event.is_cancelled,
             event.realtime_missing,
+            event.transport_mode,
         )
         for event in events
     ]
@@ -76,6 +80,7 @@ async def upsert_line_metadata(conn: asyncpg.Connection, lines: Iterable[LineMet
             line.background_color,
             line.text_color,
             line.border_color,
+            line.transport_mode,
         )
         for line in lines
     ]

@@ -94,13 +94,15 @@ async def health() -> dict[str, str]:
 @app.get("/api/v1/delays/worst-lines", response_model=list[WorstLine])
 async def get_worst_lines(window_minutes: int = Query(default=60, ge=5, le=10080), limit: int = Query(default=10, ge=1, le=50)) -> list[WorstLine]:
     sql = """
-    SELECT line_number,
-           AVG(delay_seconds)::float AS avg_delay_seconds,
-           COUNT(*)::int AS sample_size
-    FROM departure_delay_events
-    WHERE recorded_at >= NOW() - ($1::int * INTERVAL '1 minute')
-      AND delay_seconds IS NOT NULL
-    GROUP BY line_number
+    SELECT e.line_number,
+           AVG(e.delay_seconds)::float AS avg_delay_seconds,
+           COUNT(*)::int AS sample_size,
+           m.transport_mode
+    FROM departure_delay_events e
+    LEFT JOIN line_metadata m ON e.line_number = m.line_number
+    WHERE e.recorded_at >= NOW() - ($1::int * INTERVAL '1 minute')
+      AND e.delay_seconds IS NOT NULL
+    GROUP BY e.line_number, m.transport_mode
     HAVING COUNT(*) > 5
     ORDER BY avg_delay_seconds DESC
     LIMIT $2
@@ -116,21 +118,23 @@ async def get_delay_breakdown_by_stop(
     stop_gid: str | None = Query(default=None),
 ) -> list[WorstLine]:
     if stop_gid:
-        stop_filter = "AND stop_gid = $2"
+        stop_filter = "AND e.stop_gid = $2"
         params: tuple[object, ...] = (window_minutes, stop_gid)
     else:
         stop_filter = ""
         params = (window_minutes,)
 
     sql = f"""
-    SELECT line_number,
-           AVG(delay_seconds)::float AS avg_delay_seconds,
-           COUNT(*)::int AS sample_size
-    FROM departure_delay_events
-    WHERE recorded_at >= NOW() - ($1::int * INTERVAL '1 minute')
-      AND delay_seconds IS NOT NULL
+    SELECT e.line_number,
+           AVG(e.delay_seconds)::float AS avg_delay_seconds,
+           COUNT(*)::int AS sample_size,
+           m.transport_mode
+    FROM departure_delay_events e
+    LEFT JOIN line_metadata m ON e.line_number = m.line_number
+    WHERE e.recorded_at >= NOW() - ($1::int * INTERVAL '1 minute')
+      AND e.delay_seconds IS NOT NULL
       {stop_filter}
-    GROUP BY line_number
+    GROUP BY e.line_number, m.transport_mode
     HAVING COUNT(*) > 5
     ORDER BY avg_delay_seconds DESC
     """
@@ -193,7 +197,8 @@ async def get_line_metadata() -> list[LineMetadata]:
            foreground_color,
            background_color,
            text_color,
-           border_color
+           border_color,
+           transport_mode
     FROM line_metadata
     ORDER BY line_number
     """
