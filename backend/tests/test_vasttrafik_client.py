@@ -46,6 +46,7 @@ async def test_fetch_departures_sends_auth_key_when_configured():
     assert http_client.post_calls[0]["headers"] == {"Ocp-Apim-Subscription-Key": "auth-key"}
     assert http_client.get_calls[0]["headers"]["Authorization"] == "Bearer token-123"
     assert http_client.get_calls[0]["headers"]["Ocp-Apim-Subscription-Key"] == "auth-key"
+    assert http_client.get_calls[0]["params"] == {"timeSpan": "45", "transportModes": "tram,bus"}
 
 
 @pytest.mark.anyio
@@ -63,3 +64,4 @@ async def test_fetch_departures_omits_auth_key_when_not_set():
 
     assert http_client.post_calls[0]["headers"] is None
     assert http_client.get_calls[0]["headers"] == {"Authorization": "Bearer token-123"}
+    assert http_client.get_calls[0]["params"] == {"timeSpan": "45", "transportModes": "tram,bus"}

@@ -140,15 +140,19 @@ async def test_delay_breakdown_by_stop_uses_stop_filter_when_provided(monkeypatc
 
 
 @pytest.mark.anyio
-async def test_monitored_stops_endpoint_returns_distinct_stop_ids(monkeypatch):
-    conn = FakeConn(rows=[{"stop_gid": "9021014001760000"}, {"stop_gid": "9021014001950000"}])
-    monkeypatch.setattr(main.db, "_pool", FakePool(conn))
-
+async def test_monitored_stops_endpoint_returns_human_readable_stop_names():
     async with AsyncClient(transport=ASGITransport(app=main.app), base_url="http://test") as client:
         response = await client.get("/api/v1/stops/monitored")
 
     assert response.status_code == 200
-    assert response.json() == [{"stop_gid": "9021014001760000"}, {"stop_gid": "9021014001950000"}]
+    assert response.json() == [
+        {"stop_gid": "9021014001760000", "stop_name": "Centralstationen"},
+        {"stop_gid": "9021014005650000", "stop_name": "Redbergsplatsen"},
+        {"stop_gid": "9021014002510000", "stop_name": "Korsvägen"},
+        {"stop_gid": "9021014003610000", "stop_name": "Järntorget"},
+        {"stop_gid": "9021014004490000", "stop_name": "Marklandsgatan"},
+        {"stop_gid": "9021014003100000", "stop_name": "Hjalmar Brantingsplatsen"},
+    ]
 
 
 @pytest.mark.anyio

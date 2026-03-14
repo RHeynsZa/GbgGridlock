@@ -10,15 +10,19 @@ import httpx
 from .worker_models import DepartureDelayEvent, LineMetadata
 from .worker_repository import insert_events, upsert_line_metadata
 from .vasttrafik_client import VasttrafikClient
+from .monitored_stops import MONITORED_STOP_AREA_GIDS
 
 logger = logging.getLogger(__name__)
 
 
-TARGET_STOP_AREA_GIDS = [
-    "9021014001760000",
-    "9021014002510000",
-    "9021014002440000",
-]
+TARGET_STOP_AREA_GIDS = list(MONITORED_STOP_AREA_GIDS)
+ALLOWED_TRANSPORT_MODES = {"tram", "bus"}
+
+
+def _transport_mode(dep: dict) -> str:
+    line_obj = dep.get("serviceJourney", {}).get("line") or dep.get("line") or {}
+    transport_mode = line_obj.get("transportMode") or dep.get("transportMode")
+    return str(transport_mode).lower() if transport_mode else ""
 
 
 def _parse_iso(ts: str | None) -> datetime | None:
@@ -32,6 +36,9 @@ def _extract_events(stop_gid: str, payload: dict, recorded_at: datetime) -> list
     events: list[DepartureDelayEvent] = []
 
     for dep in departures:
+        if _transport_mode(dep) not in ALLOWED_TRANSPORT_MODES:
+            continue
+
         planned = _parse_iso(dep.get("plannedTime") or dep.get("planned") or dep.get("scheduledTime"))
         estimated = _parse_iso(dep.get("estimatedTime") or dep.get("estimated") or dep.get("realtimeTime"))
         if planned is None:
@@ -75,6 +82,9 @@ def _extract_line_metadata(payload: dict) -> list[LineMetadata]:
     lines_seen: dict[str, LineMetadata] = {}
 
     for dep in departures:
+        if _transport_mode(dep) not in ALLOWED_TRANSPORT_MODES:
+            continue
+
         line_obj = dep.get("serviceJourney", {}).get("line") or dep.get("line") or {}
         line_number = line_obj.get("shortName") or line_obj.get("name")
         
