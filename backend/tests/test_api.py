@@ -149,3 +149,18 @@ async def test_monitored_stops_endpoint_returns_distinct_stop_ids(monkeypatch):
 
     assert response.status_code == 200
     assert response.json() == [{"stop_gid": "9021014001760000"}, {"stop_gid": "9021014001950000"}]
+
+
+@pytest.mark.anyio
+async def test_cors_preflight_allows_github_pages_origin():
+    async with AsyncClient(transport=ASGITransport(app=main.app), base_url="http://test") as client:
+        response = await client.options(
+            "/api/v1/delays/worst-lines",
+            headers={
+                "Origin": "https://rheynsza.github.io",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "https://rheynsza.github.io"

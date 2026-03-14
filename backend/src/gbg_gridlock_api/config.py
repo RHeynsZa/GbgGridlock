@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     vt_api_base_url: str = "https://ext-api.vasttrafik.se/pr/v4"
     worker_interval_seconds: int = 60
     worker_http_concurrency: int = 5
+    cors_allowed_origins: list[str] = [
+        "https://rheynsza.github.io",
+        "https://rheynsza.github.io/GbgGridlock",
+        "http://localhost:5173",
+    ]
 
     @field_validator("database_url", mode="before")
     @classmethod
