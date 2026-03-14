@@ -71,14 +71,55 @@ def test_extract_line_metadata_deduplicates_and_maps_colors():
 
     lines = main._extract_line_metadata(payload)
 
-    assert len(lines) == 2
+    assert len(lines) == 3
     line_5 = next(line for line in lines if line.line_number == "5")
     assert line_5.foreground_color == "FFFFFF"
     assert line_5.background_color == "FF0000"
+    assert line_5.transport_mode == "tram"
+    
     line_11 = next(line for line in lines if line.line_number == "11")
     assert line_11.foreground_color == "FFFFFF"
     assert line_11.background_color == "0000FF"
+    assert line_11.transport_mode == "bus"
+    
+    line_express = next(line for line in lines if line.line_number == "Express")
+    assert line_express.transport_mode == "ferry"
 
+
+def test_extract_events_uses_fallback_heuristic_when_transport_mode_missing():
+    recorded_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    payload = {
+        "results": [
+            {
+                "serviceJourney": {"gid": "j-tram", "line": {"shortName": "6"}},
+                "plannedTime": "2026-01-01T10:00:00Z",
+                "estimatedTime": "2026-01-01T10:01:00Z",
+            },
+            {
+                "serviceJourney": {"gid": "j-bus", "line": {"shortName": "16"}},
+                "plannedTime": "2026-01-01T10:05:00Z",
+                "estimatedTime": "2026-01-01T10:06:00Z",
+            },
+            {
+                "serviceJourney": {"gid": "j-ferry", "line": {"shortName": "286"}},
+                "plannedTime": "2026-01-01T10:10:00Z",
+                "estimatedTime": "2026-01-01T10:11:00Z",
+            },
+        ]
+    }
+
+    events = main._extract_events("stop-a", payload, recorded_at)
+
+    assert len(events) == 3
+    
+    tram_event = next(e for e in events if e.line_number == "6")
+    assert tram_event.transport_mode == "tram"
+    
+    bus_event = next(e for e in events if e.line_number == "16")
+    assert bus_event.transport_mode == "bus"
+    
+    ferry_event = next(e for e in events if e.line_number == "286")
+    assert ferry_event.transport_mode == "ferry"
 
 
 class FakeClient:

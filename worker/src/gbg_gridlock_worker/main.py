@@ -16,13 +16,37 @@ from .vasttrafik_client import VasttrafikClient
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-ALLOWED_TRANSPORT_MODES = {"tram", "bus"}
+ALLOWED_TRANSPORT_MODES = {"tram", "bus", "ferry", "boat"}
 
 
-def _transport_mode(dep: dict) -> str:
+def _infer_transport_mode_from_line_number(line_number: str) -> str:
+    """Fallback heuristic when API doesn't provide transportMode."""
+    num = line_number.strip().upper()
+    
+    if num.startswith('2'):
+        return "ferry"
+    
+    try:
+        numeric_value = int(num)
+        if 1 <= numeric_value <= 13:
+            return "tram"
+    except ValueError:
+        pass
+    
+    return "bus"
+
+
+def _transport_mode(dep: dict, line_number: str = "") -> str:
     line_obj = dep.get("serviceJourney", {}).get("line") or dep.get("line") or {}
     transport_mode = line_obj.get("transportMode") or dep.get("transportMode")
-    return str(transport_mode).lower() if transport_mode else ""
+    
+    if transport_mode:
+        return str(transport_mode).lower()
+    
+    if line_number:
+        return _infer_transport_mode_from_line_number(line_number)
+    
+    return ""
 
 
 def _parse_iso(ts: str | None) -> datetime | None:
@@ -36,10 +60,6 @@ def _extract_events(stop_gid: str, payload: dict, recorded_at: datetime) -> list
     events: list[DepartureDelayEvent] = []
 
     for dep in departures:
-        transport_mode = _transport_mode(dep)
-        if transport_mode not in ALLOWED_TRANSPORT_MODES:
-            continue
-
         planned = _parse_iso(dep.get("plannedTime") or dep.get("planned") or dep.get("scheduledTime"))
         estimated = _parse_iso(dep.get("estimatedTime") or dep.get("estimated") or dep.get("realtimeTime"))
         if planned is None:
@@ -57,6 +77,11 @@ def _extract_events(stop_gid: str, payload: dict, recorded_at: datetime) -> list
             or dep.get("line", {}).get("name")
             or "?"
         )
+        
+        transport_mode = _transport_mode(dep, line_number)
+        if transport_mode not in ALLOWED_TRANSPORT_MODES:
+            continue
+        
         is_cancelled = bool(dep.get("isCancelled", False))
         realtime_missing = estimated is None
         delay_seconds = int((estimated - planned).total_seconds()) if estimated else None
@@ -84,14 +109,14 @@ def _extract_line_metadata(payload: dict) -> list[LineMetadata]:
     lines_seen: dict[str, LineMetadata] = {}
 
     for dep in departures:
-        transport_mode = _transport_mode(dep)
-        if transport_mode not in ALLOWED_TRANSPORT_MODES:
-            continue
-
         line_obj = dep.get("serviceJourney", {}).get("line") or dep.get("line") or {}
         line_number = line_obj.get("shortName") or line_obj.get("name")
         
         if not line_number:
+            continue
+
+        transport_mode = _transport_mode(dep, str(line_number))
+        if transport_mode not in ALLOWED_TRANSPORT_MODES:
             continue
 
         if line_number in lines_seen:
