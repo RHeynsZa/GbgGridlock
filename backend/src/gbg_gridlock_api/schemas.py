@@ -43,3 +43,27 @@ class DebugMetrics(BaseModel):
     poll_cycles_count_5m: int
     successful_stop_polls_count_5m: int
     failed_stop_polls_count_5m: int
+
+
+class NetworkStats(BaseModel):
+    avg_delay_seconds: float
+    reliability_percent: float
+    cancellation_rate_percent: float
+    p95_delay_seconds: float
+    sample_size: int
+
+
+class HourlyTrendPoint(BaseModel):
+    hour: str
+    tram: float
+    bus: float
+    ferry: float
+
+
+class LineDetail(BaseModel):
+    line_number: str
+    transport_mode: str | None
+    avg_delay_seconds: float
+    on_time_rate_percent: float
+    canceled_trips: int
+    sample_size: int

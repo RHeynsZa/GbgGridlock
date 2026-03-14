@@ -5,7 +5,7 @@ import { ArrowUpRight, BusFront, Languages, Moon, Ship, Sun, TramFront, Triangle
 import { useTranslation } from 'react-i18next'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { fetchDebugMetrics, fetchLineColors, fetchMonitoredStops, fetchWorstLines } from '@/lib/api'
+import { fetchDebugMetrics, fetchHourlyTrend, fetchLineColors, fetchLineDetails, fetchMonitoredStops, fetchNetworkStats, fetchWorstLines } from '@/lib/api'
 
 type LineMode = 'Tram' | 'Bus' | 'Ferry'
 
@@ -41,12 +41,6 @@ type DistributionPoint = {
   p95: number
 }
 
-const corridorMetrics: CorridorMetric[] = []
-
-const delayTrend: TrendPoint[] = []
-
-const lineDrilldown: LineDrilldown[] = []
-
 const fallbackLineStyles: Record<string, { backgroundColor: string; textColor: string; borderColor: string }> = {
   '5': { backgroundColor: '#56B4E9', textColor: '#0F172A', borderColor: '#56B4E9' },
   '6': { backgroundColor: '#009E73', textColor: '#FFFFFF', borderColor: '#009E73' },
@@ -78,31 +72,53 @@ export function DashboardPage() {
     queryFn: fetchDebugMetrics,
     refetchInterval: 30_000,
   })
+  const networkStatsQuery = useQuery({
+    queryKey: ['network-stats'],
+    queryFn: () => fetchNetworkStats(60),
+  })
+  const hourlyTrendQuery = useQuery({
+    queryKey: ['hourly-trend'],
+    queryFn: () => fetchHourlyTrend(24),
+  })
+  const lineDetailsQuery = useQuery({
+    queryKey: ['line-details'],
+    queryFn: () => fetchLineDetails(60),
+  })
 
   const avgDelay = useMemo(
-    () => Math.round(corridorMetrics.reduce((sum, corridor) => sum + corridor.avgDelaySeconds, 0) / corridorMetrics.length),
-    [],
+    () => Math.round(networkStatsQuery.data?.avg_delay_seconds ?? 0),
+    [networkStatsQuery.data],
   )
   const reliability = useMemo(
-    () => Math.round(corridorMetrics.reduce((sum, corridor) => sum + corridor.reliability, 0) / corridorMetrics.length),
-    [],
+    () => Math.round(networkStatsQuery.data?.reliability_percent ?? 0),
+    [networkStatsQuery.data],
   )
 
   const cancellationRate = useMemo(() => {
-    const cancel = corridorMetrics.reduce((sum, corridor) => sum + corridor.canceledDepartures, 0)
-    const baselineDepartures = 640
-    return Number(((cancel / baselineDepartures) * 100).toFixed(1))
-  }, [])
+    return Number((networkStatsQuery.data?.cancellation_rate_percent ?? 0).toFixed(1))
+  }, [networkStatsQuery.data])
 
   const p95Delay = useMemo(() => {
-    const sorted = [...lineDrilldown].sort((a, b) => a.avgDelaySeconds - b.avgDelaySeconds)
-    const idx = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))
-    return sorted[idx]?.avgDelaySeconds ?? 0
-  }, [])
+    return Math.round(networkStatsQuery.data?.p95_delay_seconds ?? 0)
+  }, [networkStatsQuery.data])
+
+  const lineDrilldown = useMemo<LineDrilldown[]>(() => {
+    if (!lineDetailsQuery.data) return []
+    
+    return lineDetailsQuery.data.map((line) => ({
+      line: line.line_number,
+      mode: mapTransportModeToLineMode(line.transport_mode),
+      district: 'Unknown',
+      avgDelaySeconds: Math.round(line.avg_delay_seconds),
+      crowdingScore: 0,
+      canceledTrips: line.canceled_trips,
+      onTimeRate: Math.round(line.on_time_rate_percent),
+    }))
+  }, [lineDetailsQuery.data])
 
   const filteredLines = useMemo(
     () => lineDrilldown.filter((line) => (selectedMode === 'All' ? true : line.mode === selectedMode)),
-    [selectedMode],
+    [selectedMode, lineDrilldown],
   )
 
   const selectedLineStats = useMemo(
@@ -303,7 +319,7 @@ export function DashboardPage() {
           <CardContent>
             <div className="h-[250px] w-full sm:h-[320px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={delayTrend}>
+                <AreaChart data={hourlyTrendQuery.data ?? []}>
                   <defs>
                     <linearGradient id="tramGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#7E57FF" stopOpacity={0.45} />
