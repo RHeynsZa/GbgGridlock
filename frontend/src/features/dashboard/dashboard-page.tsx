@@ -41,34 +41,11 @@ type DistributionPoint = {
   p95: number
 }
 
-const corridorMetrics: CorridorMetric[] = [
-  { corridor: 'Brunnsparken', avgDelaySeconds: 286, canceledDepartures: 18, ridership: 12400, reliability: 72 },
-  { corridor: 'Linnéplatsen', avgDelaySeconds: 224, canceledDepartures: 11, ridership: 9700, reliability: 79 },
-  { corridor: 'Korsvägen', avgDelaySeconds: 248, canceledDepartures: 15, ridership: 10600, reliability: 76 },
-  { corridor: 'Järntorget', avgDelaySeconds: 198, canceledDepartures: 9, ridership: 8200, reliability: 82 },
-]
+const corridorMetrics: CorridorMetric[] = []
 
-const delayTrend: TrendPoint[] = [
-  { hour: '06:00', tram: 110, bus: 140, ferry: 88 },
-  { hour: '08:00', tram: 275, bus: 290, ferry: 133 },
-  { hour: '10:00', tram: 188, bus: 205, ferry: 95 },
-  { hour: '12:00', tram: 164, bus: 178, ferry: 90 },
-  { hour: '14:00', tram: 201, bus: 224, ferry: 108 },
-  { hour: '16:00', tram: 304, bus: 337, ferry: 156 },
-  { hour: '18:00', tram: 281, bus: 302, ferry: 147 },
-  { hour: '20:00', tram: 172, bus: 196, ferry: 101 },
-]
+const delayTrend: TrendPoint[] = []
 
-const lineDrilldown: LineDrilldown[] = [
-  { line: '5', mode: 'Tram', district: 'Centrum', avgDelaySeconds: 244, crowdingScore: 87, canceledTrips: 3, onTimeRate: 67 },
-  { line: '6', mode: 'Tram', district: 'Hisingen', avgDelaySeconds: 268, crowdingScore: 81, canceledTrips: 4, onTimeRate: 64 },
-  { line: '11', mode: 'Tram', district: 'Majorna', avgDelaySeconds: 198, crowdingScore: 74, canceledTrips: 1, onTimeRate: 76 },
-  { line: '16', mode: 'Bus', district: 'Centrum', avgDelaySeconds: 302, crowdingScore: 90, canceledTrips: 5, onTimeRate: 59 },
-  { line: '19', mode: 'Bus', district: 'Hisingen', avgDelaySeconds: 236, crowdingScore: 78, canceledTrips: 2, onTimeRate: 70 },
-  { line: 'X4', mode: 'Bus', district: 'Lundby', avgDelaySeconds: 287, crowdingScore: 86, canceledTrips: 6, onTimeRate: 61 },
-  { line: '286', mode: 'Ferry', district: 'Södra Skärgården', avgDelaySeconds: 155, crowdingScore: 58, canceledTrips: 1, onTimeRate: 83 },
-  { line: '287', mode: 'Ferry', district: 'Norra Skärgården', avgDelaySeconds: 171, crowdingScore: 61, canceledTrips: 2, onTimeRate: 80 },
-]
+const lineDrilldown: LineDrilldown[] = []
 
 const fallbackLineStyles: Record<string, { backgroundColor: string; textColor: string; borderColor: string }> = {
   '5': { backgroundColor: '#56B4E9', textColor: '#0F172A', borderColor: '#56B4E9' },
@@ -147,12 +124,27 @@ export function DashboardPage() {
     return Object.fromEntries(entries)
   }, [lineColorsQuery.data])
 
+  const getLineModeFromNumber = (lineNumber: string): LineMode => {
+    const num = lineNumber.trim().toUpperCase()
+    
+    if (num.startsWith('2')) {
+      return 'Ferry'
+    }
+    
+    const numericValue = parseInt(num, 10)
+    if (!isNaN(numericValue) && numericValue >= 1 && numericValue <= 13) {
+      return 'Tram'
+    }
+    
+    return 'Bus'
+  }
+
   const lineDelayRanking = useMemo(() => {
     if (worstLinesQuery.data && worstLinesQuery.data.length > 0) {
       return [...worstLinesQuery.data]
         .map((line) => ({
           line: line.line_number,
-          mode: (line.line_number.startsWith('2') ? 'Ferry' : 'Bus') as LineMode,
+          mode: getLineModeFromNumber(line.line_number),
           avgDelaySeconds: Math.round(line.avg_delay_seconds),
         }))
         .sort((a, b) => b.avgDelaySeconds - a.avgDelaySeconds)
