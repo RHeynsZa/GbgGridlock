@@ -1,23 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  Cell,
-  Legend,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
-import { BusFront, Languages, Moon, Ship, Sun, TramFront } from 'lucide-react'
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { ArrowUpRight, BusFront, Languages, Moon, Ship, Sun, TramFront, TriangleAlert, Waves } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { fetchLineColors, fetchMonitoredStops, fetchWorstLines } from '@/lib/api'
+
+type LineMode = 'Tram' | 'Bus' | 'Ferry'
 
 type CorridorMetric = {
   corridor: string
@@ -27,19 +17,12 @@ type CorridorMetric = {
   reliability: number
 }
 
-type ModalShare = {
-  mode: LineMode
-  value: number
-}
-
 type TrendPoint = {
   hour: string
   tram: number
   bus: number
   ferry: number
 }
-
-type LineMode = 'Tram' | 'Bus' | 'Ferry'
 
 type LineDrilldown = {
   line: string
@@ -51,17 +34,18 @@ type LineDrilldown = {
   onTimeRate: number
 }
 
+type DistributionPoint = {
+  mode: LineMode
+  p50: number
+  p85: number
+  p95: number
+}
+
 const corridorMetrics: CorridorMetric[] = [
   { corridor: 'Brunnsparken', avgDelaySeconds: 286, canceledDepartures: 18, ridership: 12400, reliability: 72 },
   { corridor: 'Linnéplatsen', avgDelaySeconds: 224, canceledDepartures: 11, ridership: 9700, reliability: 79 },
   { corridor: 'Korsvägen', avgDelaySeconds: 248, canceledDepartures: 15, ridership: 10600, reliability: 76 },
   { corridor: 'Järntorget', avgDelaySeconds: 198, canceledDepartures: 9, ridership: 8200, reliability: 82 },
-]
-
-const modalSplit: ModalShare[] = [
-  { mode: 'Tram', value: 48 },
-  { mode: 'Bus', value: 39 },
-  { mode: 'Ferry', value: 13 },
 ]
 
 const delayTrend: TrendPoint[] = [
@@ -86,10 +70,6 @@ const lineDrilldown: LineDrilldown[] = [
   { line: '287', mode: 'Ferry', district: 'Norra Skärgården', avgDelaySeconds: 171, crowdingScore: 61, canceledTrips: 2, onTimeRate: 80 },
 ]
 
-const pieColors = ['#7E57FF', '#A06EFF', '#C4AEFF']
-
-
-
 const fallbackLineStyles: Record<string, { backgroundColor: string; textColor: string; borderColor: string }> = {
   '5': { backgroundColor: '#56B4E9', textColor: '#0F172A', borderColor: '#56B4E9' },
   '6': { backgroundColor: '#009E73', textColor: '#FFFFFF', borderColor: '#009E73' },
@@ -101,6 +81,8 @@ const fallbackLineStyles: Record<string, { backgroundColor: string; textColor: s
   '287': { backgroundColor: '#264653', textColor: '#FFFFFF', borderColor: '#264653' },
 }
 
+const chartModeOrder: LineMode[] = ['Tram', 'Bus', 'Ferry']
+
 export function DashboardPage() {
   const { t, i18n } = useTranslation()
   const [selectedMode, setSelectedMode] = useState<'All' | LineMode>('All')
@@ -108,16 +90,8 @@ export function DashboardPage() {
   const [selectedStop, setSelectedStop] = useState<string>('all')
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => document.documentElement.classList.contains('dark'))
 
-  const lineColorsQuery = useQuery({
-    queryKey: ['line-colors'],
-    queryFn: fetchLineColors,
-  })
-
-  const monitoredStopsQuery = useQuery({
-    queryKey: ['monitored-stops'],
-    queryFn: fetchMonitoredStops,
-  })
-
+  const lineColorsQuery = useQuery({ queryKey: ['line-colors'], queryFn: fetchLineColors })
+  const monitoredStopsQuery = useQuery({ queryKey: ['monitored-stops'], queryFn: fetchMonitoredStops })
   const worstLinesQuery = useQuery({
     queryKey: ['worst-lines-by-stop', selectedStop],
     queryFn: () => fetchWorstLines(selectedStop === 'all' ? undefined : selectedStop),
@@ -127,13 +101,22 @@ export function DashboardPage() {
     () => Math.round(corridorMetrics.reduce((sum, corridor) => sum + corridor.avgDelaySeconds, 0) / corridorMetrics.length),
     [],
   )
-
   const reliability = useMemo(
     () => Math.round(corridorMetrics.reduce((sum, corridor) => sum + corridor.reliability, 0) / corridorMetrics.length),
     [],
   )
 
-  const totalRidership = useMemo(() => corridorMetrics.reduce((sum, corridor) => sum + corridor.ridership, 0), [])
+  const cancellationRate = useMemo(() => {
+    const cancel = corridorMetrics.reduce((sum, corridor) => sum + corridor.canceledDepartures, 0)
+    const baselineDepartures = 640
+    return Number(((cancel / baselineDepartures) * 100).toFixed(1))
+  }, [])
+
+  const p95Delay = useMemo(() => {
+    const sorted = [...lineDrilldown].sort((a, b) => a.avgDelaySeconds - b.avgDelaySeconds)
+    const idx = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))
+    return sorted[idx]?.avgDelaySeconds ?? 0
+  }, [])
 
   const filteredLines = useMemo(
     () => lineDrilldown.filter((line) => (selectedMode === 'All' ? true : line.mode === selectedMode)),
@@ -173,88 +156,43 @@ export function DashboardPage() {
     return [...lineDrilldown].sort((a, b) => b.avgDelaySeconds - a.avgDelaySeconds)
   }, [worstLinesQuery.data])
 
+  const distributionByMode = useMemo<DistributionPoint[]>(() => {
+    return chartModeOrder.map((mode) => {
+      const values = lineDrilldown
+        .filter((line) => line.mode === mode)
+          .map((line) => line.avgDelaySeconds)
+          .sort((a, b) => a - b)
+
+      if (values.length === 0) {
+        return { mode, p50: 0, p85: 0, p95: 0 }
+      }
+
+      const percentile = (p: number) => values[Math.min(values.length - 1, Math.floor((values.length - 1) * p))]
+
+      return {
+        mode,
+        p50: percentile(0.5),
+        p85: percentile(0.85),
+        p95: percentile(0.95),
+      }
+    })
+  }, [])
+
   const maxLineDelay = lineDelayRanking[0]?.avgDelaySeconds ?? 1
 
   const getModeIcon = (mode: LineMode) => {
-    if (mode === 'Bus') {
-      return <BusFront className="h-4 w-4" />
-    }
-
-    if (mode === 'Ferry') {
-      return <Ship className="h-4 w-4" />
-    }
-
+    if (mode === 'Bus') return <BusFront className="h-4 w-4" />
+    if (mode === 'Ferry') return <Ship className="h-4 w-4" />
     return <TramFront className="h-4 w-4" />
-  }
-
-  const hexToRgb = (hex: string) => {
-    const normalized = hex.replace('#', '')
-    if (normalized.length !== 6) {
-      return null
-    }
-
-    const bigint = Number.parseInt(normalized, 16)
-    if (Number.isNaN(bigint)) {
-      return null
-    }
-
-    return {
-      r: (bigint >> 16) & 255,
-      g: (bigint >> 8) & 255,
-      b: bigint & 255,
-    }
-  }
-
-  const relativeLuminance = (hex: string) => {
-    const rgb = hexToRgb(hex)
-    if (!rgb) {
-      return 0
-    }
-
-    const transform = (value: number) => {
-      const channel = value / 255
-      return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
-    }
-
-    const r = transform(rgb.r)
-    const g = transform(rgb.g)
-    const b = transform(rgb.b)
-
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b
-  }
-
-  const contrastRatio = (hexA: string, hexB: string) => {
-    const lumA = relativeLuminance(hexA)
-    const lumB = relativeLuminance(hexB)
-    const lighter = Math.max(lumA, lumB)
-    const darker = Math.min(lumA, lumB)
-
-    return (lighter + 0.05) / (darker + 0.05)
-  }
-
-  const readableTextColor = (backgroundColor: string, preferredTextColor: string) => {
-    if (contrastRatio(backgroundColor, preferredTextColor) >= 4.5) {
-      return preferredTextColor
-    }
-
-    const whiteContrast = contrastRatio(backgroundColor, '#FFFFFF')
-    const darkContrast = contrastRatio(backgroundColor, '#111827')
-
-    return whiteContrast >= darkContrast ? '#FFFFFF' : '#111827'
   }
 
   const getLineStyle = (line: string) => {
     const normalized = normalizeLineNumber(line)
-
-    const resolved =
+    return (
       lineStyles[line] ??
       lineStyles[normalized] ??
       fallbackLineStyles[normalized] ?? { backgroundColor: '#64748B', textColor: '#FFFFFF', borderColor: '#64748B' }
-
-    return {
-      ...resolved,
-      textColor: readableTextColor(resolved.backgroundColor, resolved.textColor),
-    }
+    )
   }
 
   const toggleTheme = () => {
@@ -272,64 +210,62 @@ export function DashboardPage() {
   const translateMode = (mode: LineMode | 'All') => t(`dashboard.modes.${mode.toLowerCase()}`)
 
   return (
-    <main className="mx-auto max-w-[1280px] space-y-6 px-4 py-8 md:px-8 lg:px-10">
-      <header className="rounded-2xl border border-border/70 bg-card/80 p-6 shadow-[0_20px_65px_-30px_rgba(96,55,177,0.6)] backdrop-blur">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <main className="mx-auto w-full max-w-[1400px] space-y-5 px-3 py-4 sm:px-6 lg:space-y-6 lg:px-10 lg:py-8">
+      <header className="relative overflow-hidden rounded-3xl border border-border/80 bg-card/85 p-5 shadow-[0_30px_80px_-35px_rgba(96,55,177,0.6)] backdrop-blur lg:p-8">
+        <div className="pointer-events-none absolute -right-14 -top-14 h-44 w-44 rounded-full bg-primary/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 left-6 h-44 w-44 rounded-full bg-blue-400/20 blur-3xl" />
+
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
-            <p className="text-sm font-medium tracking-wide text-primary">{t('dashboard.badge')}</p>
-            <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">{t('dashboard.title')}</h1>
-            <p className="max-w-2xl text-sm text-muted-foreground md:text-base">{t('dashboard.subtitle')}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">{t('dashboard.badge')}</p>
+            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">GbgGridlock</h1>
+            <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">{t('dashboard.subtitle')}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <button className="toggle-btn" type="button" onClick={toggleLanguage}>
+
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+            <button className="toggle-btn justify-center" type="button" onClick={toggleLanguage}>
               <Languages className="h-4 w-4" /> {t('controls.language')}
             </button>
-            <button className="toggle-btn" type="button" onClick={toggleTheme}>
+            <button className="toggle-btn justify-center" type="button" onClick={toggleTheme}>
               {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />} {t('controls.theme')}
             </button>
           </div>
         </div>
       </header>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card className="kpi-card">
-          <CardHeader className="pb-2">
-            <CardDescription>{t('kpis.networkDelay')}</CardDescription>
-            <CardTitle>{formatKpi(avgDelay, 's')}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-xs text-muted-foreground">{t('kpis.networkDelayDesc')}</CardContent>
-        </Card>
-        <Card className="kpi-card">
-          <CardHeader className="pb-2">
-            <CardDescription>{t('kpis.reliability')}</CardDescription>
-            <CardTitle>{formatKpi(reliability, '%')}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-xs text-muted-foreground">{t('kpis.reliabilityDesc')}</CardContent>
-        </Card>
-        <Card className="kpi-card">
-          <CardHeader className="pb-2">
-            <CardDescription>{t('kpis.ridership')}</CardDescription>
-            <CardTitle>{formatKpi(totalRidership, '')}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-xs text-muted-foreground">{t('kpis.ridershipDesc')}</CardContent>
-        </Card>
-        <Card className="kpi-card">
-          <CardHeader className="pb-2">
-            <CardDescription>{t('kpis.monitoredStops')}</CardDescription>
-            <CardTitle>{formatKpi(monitoredStopsQuery.data?.length ?? 0, '')}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-xs text-muted-foreground">{t('kpis.monitoredStopsDesc')}</CardContent>
-        </Card>
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          { title: t('kpis.networkDelay'), value: formatKpi(avgDelay, 's'), icon: <TriangleAlert className="h-4 w-4" />, note: t('kpis.networkDelayDesc') },
+          { title: t('kpis.p95Delay'), value: formatKpi(p95Delay, 's'), icon: <Waves className="h-4 w-4" />, note: t('kpis.p95DelayDesc') },
+          { title: t('kpis.reliability'), value: formatKpi(reliability, '%'), icon: <ArrowUpRight className="h-4 w-4" />, note: t('kpis.reliabilityDesc') },
+          {
+            title: t('kpis.cancellationRate'),
+            value: formatKpi(cancellationRate, '%'),
+            icon: <BusFront className="h-4 w-4" />,
+            note: t('kpis.cancellationRateDesc'),
+          },
+        ].map((kpi) => (
+          <Card key={kpi.title} className="kpi-card rounded-2xl">
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center justify-between gap-2 text-xs uppercase tracking-wide">
+                {kpi.title}
+                <span className="rounded-full bg-primary/10 p-2 text-primary">{kpi.icon}</span>
+              </CardDescription>
+              <CardTitle className="text-2xl md:text-3xl">{kpi.value}</CardTitle>
+            </CardHeader>
+            <CardContent className="text-xs text-muted-foreground">{kpi.note}</CardContent>
+          </Card>
+        ))}
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-7">
-        <Card className="lg:col-span-2">
+      <section className="grid gap-4 xl:grid-cols-8">
+        <Card className="xl:col-span-2">
           <CardHeader>
             <CardTitle>{t('filters.title')}</CardTitle>
             <CardDescription>{t('filters.description')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-1">
+            <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="stop-filter">
                 {t('filters.stop')}
               </label>
@@ -343,12 +279,12 @@ export function DashboardPage() {
               </select>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
               {(['All', 'Tram', 'Bus', 'Ferry'] as const).map((mode) => (
                 <button
                   key={mode}
                   type="button"
-                  className={`chip ${selectedMode === mode ? 'chip-active' : ''}`}
+                  className={`chip justify-center text-center ${selectedMode === mode ? 'chip-active' : ''}`}
                   onClick={() => {
                     setSelectedMode(mode)
                     setSelectedLine(null)
@@ -361,23 +297,36 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-5">
+        <Card className="xl:col-span-6">
           <CardHeader>
             <CardTitle>{t('charts.timelineTitle')}</CardTitle>
             <CardDescription>{t('charts.timelineDesc')}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[320px] w-full">
+            <div className="h-[250px] w-full sm:h-[320px]">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={delayTrend}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <defs>
+                    <linearGradient id="tramGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#7E57FF" stopOpacity={0.45} />
+                      <stop offset="95%" stopColor="#7E57FF" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="busGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#A06EFF" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#A06EFF" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="ferryGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#C4AEFF" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#C4AEFF" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                   <XAxis dataKey="hour" stroke="var(--muted-foreground)" />
                   <YAxis stroke="var(--muted-foreground)" />
                   <Tooltip />
-                  <Legend />
-                  <Area type="monotone" dataKey="tram" stackId="1" name={translateMode('Tram')} stroke="#7E57FF" fill="#7E57FF" fillOpacity={0.45} />
-                  <Area type="monotone" dataKey="bus" stackId="1" name={translateMode('Bus')} stroke="#A06EFF" fill="#A06EFF" fillOpacity={0.38} />
-                  <Area type="monotone" dataKey="ferry" stackId="1" name={translateMode('Ferry')} stroke="#C4AEFF" fill="#C4AEFF" fillOpacity={0.4} />
+                  <Area type="monotone" dataKey="tram" name={translateMode('Tram')} stroke="#7E57FF" fill="url(#tramGradient)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="bus" name={translateMode('Bus')} stroke="#A06EFF" fill="url(#busGradient)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="ferry" name={translateMode('Ferry')} stroke="#C4AEFF" fill="url(#ferryGradient)" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -393,22 +342,22 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {lineDelayRanking.map((line) => {
-              const widthPercent = Math.max(8, Math.round((line.avgDelaySeconds / maxLineDelay) * 100))
+              const widthPercent = Math.max(10, Math.round((line.avgDelaySeconds / maxLineDelay) * 100))
               return (
-                <div key={line.line} className="grid grid-cols-[76px_1fr_56px] items-center gap-3">
+                <div key={line.line} className="grid grid-cols-[70px_1fr_55px] items-center gap-2 sm:grid-cols-[80px_1fr_70px] sm:gap-3">
                   <p className="text-sm font-medium">
                     {translateMode(line.mode)} {line.line}
                   </p>
                   <div className="relative h-9 rounded-xl bg-muted/80 p-1">
                     <div
-                      className="flex h-full items-center justify-end rounded-lg pr-2 text-white"
+                      className="flex h-full items-center justify-end rounded-lg pr-2"
                       style={{
                         width: `${widthPercent}%`,
                         backgroundColor: getLineStyle(line.line).backgroundColor,
                         color: getLineStyle(line.line).textColor,
                       }}
                     >
-                      <span className="rounded-full bg-black/25 p-1">{getModeIcon(line.mode)}</span>
+                      <span className="rounded-full bg-black/20 p-1">{getModeIcon(line.mode)}</span>
                     </div>
                   </div>
                   <p className="text-right text-sm font-semibold">{line.avgDelaySeconds}s</p>
@@ -423,28 +372,21 @@ export function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>{t('charts.modalTitle')}</CardTitle>
-            <CardDescription>{t('charts.modalDesc')}</CardDescription>
+            <CardTitle>{t('charts.distributionTitle')}</CardTitle>
+            <CardDescription>{t('charts.distributionDesc')}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[280px] w-full">
+            <div className="h-[300px] w-full sm:h-[320px]">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={modalSplit}
-                    dataKey="value"
-                    nameKey="mode"
-                    outerRadius={95}
-                    label={(payload) => translateMode(payload.mode as LineMode)}
-                    onClick={(entry) => setSelectedMode(entry.mode as LineMode)}
-                  >
-                    {modalSplit.map((entry, index) => (
-                      <Cell key={entry.mode} fill={pieColors[index % pieColors.length]} className="cursor-pointer" />
-                    ))}
-                  </Pie>
+                <BarChart data={distributionByMode} barCategoryGap="20%" barGap={6}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <XAxis dataKey="mode" tickFormatter={(value) => translateMode(value as LineMode)} stroke="var(--muted-foreground)" />
+                  <YAxis stroke="var(--muted-foreground)" />
                   <Tooltip />
-                  <Legend formatter={(value) => translateMode(value as LineMode)} />
-                </PieChart>
+                  <Bar dataKey="p50" name="P50" fill="#8B5CF6" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="p85" name="P85" fill="#6366F1" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="p95" name="P95" fill="#4338CA" radius={[6, 6, 0, 0]} />
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
