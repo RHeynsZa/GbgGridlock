@@ -10,8 +10,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import Settings
 from .database import Database
+from .debug_metrics import get_snapshot
 from .monitored_stops import MONITORED_STOPS
-from .schemas import BottleneckStop, DelayDistributionBucket, LineMetadata, MonitoredStop, WorstLine
+from .schemas import BottleneckStop, DebugMetrics, DelayDistributionBucket, LineMetadata, MonitoredStop, WorstLine
 from .vasttrafik_client import VasttrafikClient
 from .worker import fetch_line_metadata_once, run_poll_cycle
 
@@ -203,3 +204,9 @@ async def get_line_metadata() -> list[LineMetadata]:
     _line_metadata_cache_expiry = now + timedelta(seconds=LINE_METADATA_CACHE_TTL_SECONDS)
 
     return _line_metadata_cache
+
+
+@app.get("/api/v1/debug/metrics", response_model=DebugMetrics)
+async def get_debug_metrics() -> DebugMetrics:
+    snapshot = get_snapshot(monitored_stops_count=len(MONITORED_STOPS))
+    return DebugMetrics(**snapshot)
