@@ -12,7 +12,7 @@ from .config import Settings
 from .database import Database
 from .debug_metrics import get_snapshot
 from .monitored_stops import MONITORED_STOPS
-from .schemas import BottleneckStop, DebugMetrics, DelayDistributionBucket, LineMetadata, MonitoredStop, WorstLine
+from .schemas import BottleneckStop, DebugMetrics, DelayDistributionBucket, HourlyTrendPoint, LineDetail, LineMetadata, MonitoredStop, NetworkStats, WorstLine
 from .vasttrafik_client import VasttrafikClient
 from .worker import fetch_line_metadata_once, run_poll_cycle
 
@@ -209,6 +209,106 @@ async def get_line_metadata() -> list[LineMetadata]:
     _line_metadata_cache_expiry = now + timedelta(seconds=LINE_METADATA_CACHE_TTL_SECONDS)
 
     return _line_metadata_cache
+
+
+@app.get("/api/v1/stats/network", response_model=NetworkStats)
+async def get_network_stats(window_minutes: int = Query(default=60, ge=5, le=10080)) -> NetworkStats:
+    sql = """
+    WITH stats AS (
+        SELECT 
+            AVG(delay_seconds) AS avg_delay,
+            PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY delay_seconds) AS p95_delay,
+            COUNT(*) AS total_departures,
+            COUNT(*) FILTER (WHERE is_cancelled) AS cancelled_departures,
+            COUNT(*) FILTER (WHERE delay_seconds IS NOT NULL AND delay_seconds <= 300) AS on_time_departures
+        FROM departure_delay_events
+        WHERE recorded_at >= NOW() - ($1::int * INTERVAL '1 minute')
+          AND delay_seconds IS NOT NULL
+    )
+    SELECT 
+        COALESCE(avg_delay, 0)::float AS avg_delay_seconds,
+        CASE 
+            WHEN total_departures > 0 
+            THEN (on_time_departures::float / total_departures * 100)
+            ELSE 0 
+        END AS reliability_percent,
+        CASE 
+            WHEN total_departures > 0 
+            THEN (cancelled_departures::float / total_departures * 100)
+            ELSE 0 
+        END AS cancellation_rate_percent,
+        COALESCE(p95_delay, 0)::float AS p95_delay_seconds,
+        total_departures::int AS sample_size
+    FROM stats
+    """
+    async with db.pool.acquire() as conn:
+        row = await conn.fetchrow(sql, window_minutes)
+    
+    if not row:
+        return NetworkStats(
+            avg_delay_seconds=0.0,
+            reliability_percent=0.0,
+            cancellation_rate_percent=0.0,
+            p95_delay_seconds=0.0,
+            sample_size=0
+        )
+    
+    return NetworkStats(**dict(row))
+
+
+@app.get("/api/v1/stats/hourly-trend", response_model=list[HourlyTrendPoint])
+async def get_hourly_trend(window_hours: int = Query(default=24, ge=1, le=168)) -> list[HourlyTrendPoint]:
+    sql = """
+    WITH hourly_data AS (
+        SELECT 
+            TO_CHAR(DATE_TRUNC('hour', recorded_at), 'HH24:00') AS hour,
+            m.transport_mode,
+            AVG(delay_seconds) AS avg_delay
+        FROM departure_delay_events e
+        LEFT JOIN line_metadata m ON e.line_number = m.line_number
+        WHERE e.recorded_at >= NOW() - ($1::int * INTERVAL '1 hour')
+          AND e.delay_seconds IS NOT NULL
+        GROUP BY DATE_TRUNC('hour', recorded_at), m.transport_mode
+    )
+    SELECT 
+        hour,
+        COALESCE(MAX(CASE WHEN LOWER(transport_mode) = 'tram' THEN avg_delay END), 0)::float AS tram,
+        COALESCE(MAX(CASE WHEN LOWER(transport_mode) = 'bus' THEN avg_delay END), 0)::float AS bus,
+        COALESCE(MAX(CASE WHEN LOWER(transport_mode) IN ('ferry', 'boat') THEN avg_delay END), 0)::float AS ferry
+    FROM hourly_data
+    GROUP BY hour
+    ORDER BY hour ASC
+    """
+    async with db.pool.acquire() as conn:
+        rows = await conn.fetch(sql, window_hours)
+    return [HourlyTrendPoint(**dict(row)) for row in rows]
+
+
+@app.get("/api/v1/lines/details", response_model=list[LineDetail])
+async def get_line_details(window_minutes: int = Query(default=60, ge=5, le=10080)) -> list[LineDetail]:
+    sql = """
+    SELECT 
+        e.line_number,
+        m.transport_mode,
+        AVG(e.delay_seconds)::float AS avg_delay_seconds,
+        CASE 
+            WHEN COUNT(*) > 0 
+            THEN (COUNT(*) FILTER (WHERE e.delay_seconds <= 300)::float / COUNT(*) * 100)
+            ELSE 0 
+        END AS on_time_rate_percent,
+        COUNT(*) FILTER (WHERE e.is_cancelled)::int AS canceled_trips,
+        COUNT(*)::int AS sample_size
+    FROM departure_delay_events e
+    LEFT JOIN line_metadata m ON e.line_number = m.line_number
+    WHERE e.recorded_at >= NOW() - ($1::int * INTERVAL '1 minute')
+      AND e.delay_seconds IS NOT NULL
+    GROUP BY e.line_number, m.transport_mode
+    HAVING COUNT(*) > 5
+    ORDER BY e.line_number
+    """
+    async with db.pool.acquire() as conn:
+        rows = await conn.fetch(sql, window_minutes)
+    return [LineDetail(**dict(row)) for row in rows]
 
 
 @app.get("/api/v1/debug/metrics", response_model=DebugMetrics)

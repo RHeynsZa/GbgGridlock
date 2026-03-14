@@ -207,3 +207,117 @@ async def test_debug_metrics_endpoint_returns_live_snapshot(monkeypatch):
         "successful_stop_polls_count_5m": 27,
         "failed_stop_polls_count_5m": 3,
     }
+
+
+@pytest.mark.anyio
+async def test_network_stats_endpoint_returns_aggregated_metrics(monkeypatch):
+    class FakeConnRow:
+        def __init__(self, rows):
+            self.rows = rows
+            self.calls = []
+
+        async def fetchrow(self, sql: str, *args):
+            self.calls.append((sql, args))
+            return self.rows[0] if self.rows else None
+
+    conn = FakeConnRow(
+        rows=[
+            {
+                "avg_delay_seconds": 85.5,
+                "reliability_percent": 72.3,
+                "cancellation_rate_percent": 1.8,
+                "p95_delay_seconds": 245.0,
+                "sample_size": 523,
+            }
+        ]
+    )
+    monkeypatch.setattr(main.db, "_pool", FakePool(conn))
+
+    async with AsyncClient(transport=ASGITransport(app=main.app), base_url="http://test") as client:
+        response = await client.get("/api/v1/stats/network", params={"window_minutes": 120})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "avg_delay_seconds": 85.5,
+        "reliability_percent": 72.3,
+        "cancellation_rate_percent": 1.8,
+        "p95_delay_seconds": 245.0,
+        "sample_size": 523,
+    }
+    assert len(conn.calls) == 1
+    _, args = conn.calls[0]
+    assert args == (120,)
+
+
+@pytest.mark.anyio
+async def test_hourly_trend_endpoint_returns_time_series_by_mode(monkeypatch):
+    conn = FakeConn(
+        rows=[
+            {"hour": "08:00", "tram": 45.2, "bus": 62.1, "ferry": 12.0},
+            {"hour": "09:00", "tram": 78.5, "bus": 91.3, "ferry": 8.5},
+        ]
+    )
+    monkeypatch.setattr(main.db, "_pool", FakePool(conn))
+
+    async with AsyncClient(transport=ASGITransport(app=main.app), base_url="http://test") as client:
+        response = await client.get("/api/v1/stats/hourly-trend", params={"window_hours": 12})
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {"hour": "08:00", "tram": 45.2, "bus": 62.1, "ferry": 12.0},
+        {"hour": "09:00", "tram": 78.5, "bus": 91.3, "ferry": 8.5},
+    ]
+    assert len(conn.calls) == 1
+    _, args = conn.calls[0]
+    assert args == (12,)
+
+
+@pytest.mark.anyio
+async def test_line_details_endpoint_returns_comprehensive_metrics_per_line(monkeypatch):
+    conn = FakeConn(
+        rows=[
+            {
+                "line_number": "5",
+                "transport_mode": "tram",
+                "avg_delay_seconds": 95.2,
+                "on_time_rate_percent": 68.5,
+                "canceled_trips": 3,
+                "sample_size": 156,
+            },
+            {
+                "line_number": "16",
+                "transport_mode": "bus",
+                "avg_delay_seconds": 112.7,
+                "on_time_rate_percent": 55.1,
+                "canceled_trips": 7,
+                "sample_size": 203,
+            },
+        ]
+    )
+    monkeypatch.setattr(main.db, "_pool", FakePool(conn))
+
+    async with AsyncClient(transport=ASGITransport(app=main.app), base_url="http://test") as client:
+        response = await client.get("/api/v1/lines/details", params={"window_minutes": 180})
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "line_number": "5",
+            "transport_mode": "tram",
+            "avg_delay_seconds": 95.2,
+            "on_time_rate_percent": 68.5,
+            "canceled_trips": 3,
+            "sample_size": 156,
+        },
+        {
+            "line_number": "16",
+            "transport_mode": "bus",
+            "avg_delay_seconds": 112.7,
+            "on_time_rate_percent": 55.1,
+            "canceled_trips": 7,
+            "sample_size": 203,
+        },
+    ]
+    assert len(conn.calls) == 1
+    _, args = conn.calls[0]
+    assert args == (180,)

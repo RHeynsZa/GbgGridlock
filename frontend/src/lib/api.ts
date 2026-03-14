@@ -40,6 +40,30 @@ export type DebugMetrics = {
   failed_stop_polls_count_5m: number
 }
 
+export type NetworkStats = {
+  avg_delay_seconds: number
+  reliability_percent: number
+  cancellation_rate_percent: number
+  p95_delay_seconds: number
+  sample_size: number
+}
+
+export type HourlyTrendPoint = {
+  hour: string
+  tram: number
+  bus: number
+  ferry: number
+}
+
+export type LineDetail = {
+  line_number: string
+  transport_mode: string | null
+  avg_delay_seconds: number
+  on_time_rate_percent: number
+  canceled_trips: number
+  sample_size: number
+}
+
 type WorstLinesResponse = WorstLine[] | { rows?: WorstLine[]; data?: WorstLine[] }
 type MonitoredStopsResponse = MonitoredStop[] | { rows?: MonitoredStop[]; data?: MonitoredStop[] }
 
@@ -147,5 +171,41 @@ export async function fetchDebugMetrics() {
   } catch (error) {
     console.warn('Failed to fetch debug metrics from backend:', error)
     return null
+  }
+}
+
+export async function fetchNetworkStats(windowMinutes: number = 60) {
+  try {
+    const { data } = await api.get<NetworkStats>('/api/v1/stats/network', {
+      params: { window_minutes: windowMinutes },
+    })
+    return data
+  } catch (error) {
+    console.warn('Failed to fetch network stats from backend:', error)
+    return null
+  }
+}
+
+export async function fetchHourlyTrend(windowHours: number = 24) {
+  try {
+    const { data } = await api.get<HourlyTrendPoint[]>('/api/v1/stats/hourly-trend', {
+      params: { window_hours: windowHours },
+    })
+    return data
+  } catch (error) {
+    console.warn('Failed to fetch hourly trend from backend:', error)
+    return []
+  }
+}
+
+export async function fetchLineDetails(windowMinutes: number = 60) {
+  try {
+    const { data } = await api.get<LineDetail[]>('/api/v1/lines/details', {
+      params: { window_minutes: windowMinutes },
+    })
+    return data
+  } catch (error) {
+    console.warn('Failed to fetch line details from backend:', error)
+    return []
   }
 }
