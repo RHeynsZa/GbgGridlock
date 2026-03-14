@@ -54,6 +54,22 @@ const fallbackLineStyles: Record<string, { backgroundColor: string; textColor: s
 
 const chartModeOrder: LineMode[] = ['Tram', 'Bus', 'Ferry']
 
+function mapTransportModeToLineMode(transportMode: string | null | undefined): LineMode {
+  if (!transportMode) {
+    return 'Bus'
+  }
+
+  const normalized = transportMode.toLowerCase()
+  if (normalized === 'tram') {
+    return 'Tram'
+  }
+  if (normalized === 'ferry' || normalized === 'boat') {
+    return 'Ferry'
+  }
+
+  return 'Bus'
+}
+
 export function DashboardPage() {
   const { t, i18n } = useTranslation()
   const [selectedMode, setSelectedMode] = useState<'All' | LineMode>('All')
@@ -139,22 +155,6 @@ export function DashboardPage() {
 
     return Object.fromEntries(entries)
   }, [lineColorsQuery.data])
-
-  const mapTransportModeToLineMode = (transportMode: string | null | undefined): LineMode => {
-    if (!transportMode) {
-      return 'Bus'
-    }
-    
-    const normalized = transportMode.toLowerCase()
-    if (normalized === 'tram') {
-      return 'Tram'
-    }
-    if (normalized === 'ferry' || normalized === 'boat') {
-      return 'Ferry'
-    }
-    
-    return 'Bus'
-  }
 
   const lineDelayRanking = useMemo(() => {
     if (worstLinesQuery.data && worstLinesQuery.data.length > 0) {
