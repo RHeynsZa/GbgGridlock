@@ -253,8 +253,8 @@ async def test_network_stats_endpoint_returns_aggregated_metrics(monkeypatch):
 async def test_hourly_trend_endpoint_returns_time_series_by_mode(monkeypatch):
     conn = FakeConn(
         rows=[
-            {"hour": "08:00", "tram": 45.2, "bus": 62.1, "ferry": 12.0},
-            {"hour": "09:00", "tram": 78.5, "bus": 91.3, "ferry": 8.5},
+            {"hour": "2026-03-14 08:00", "tram": 45.2, "bus": 62.1, "ferry": 12.0},
+            {"hour": "2026-03-14 09:00", "tram": 78.5, "bus": 91.3, "ferry": 8.5},
         ]
     )
     monkeypatch.setattr(main.db, "_pool", FakePool(conn))
@@ -264,8 +264,8 @@ async def test_hourly_trend_endpoint_returns_time_series_by_mode(monkeypatch):
 
     assert response.status_code == 200
     assert response.json() == [
-        {"hour": "08:00", "tram": 45.2, "bus": 62.1, "ferry": 12.0},
-        {"hour": "09:00", "tram": 78.5, "bus": 91.3, "ferry": 8.5},
+        {"hour": "2026-03-14 08:00", "tram": 45.2, "bus": 62.1, "ferry": 12.0},
+        {"hour": "2026-03-14 09:00", "tram": 78.5, "bus": 91.3, "ferry": 8.5},
     ]
     assert len(conn.calls) == 1
     _, args = conn.calls[0]

@@ -261,7 +261,7 @@ async def get_hourly_trend(window_hours: int = Query(default=24, ge=1, le=168)) 
     sql = """
     WITH hourly_data AS (
         SELECT 
-            TO_CHAR(DATE_TRUNC('hour', recorded_at), 'HH24:00') AS hour,
+            DATE_TRUNC('hour', recorded_at) AS hour_timestamp,
             m.transport_mode,
             AVG(delay_seconds) AS avg_delay
         FROM departure_delay_events e
@@ -271,13 +271,13 @@ async def get_hourly_trend(window_hours: int = Query(default=24, ge=1, le=168)) 
         GROUP BY DATE_TRUNC('hour', recorded_at), m.transport_mode
     )
     SELECT 
-        hour,
+        TO_CHAR(hour_timestamp, 'YYYY-MM-DD HH24:MI') AS hour,
         COALESCE(MAX(CASE WHEN LOWER(transport_mode) = 'tram' THEN avg_delay END), 0)::float AS tram,
         COALESCE(MAX(CASE WHEN LOWER(transport_mode) = 'bus' THEN avg_delay END), 0)::float AS bus,
         COALESCE(MAX(CASE WHEN LOWER(transport_mode) IN ('ferry', 'boat') THEN avg_delay END), 0)::float AS ferry
     FROM hourly_data
-    GROUP BY hour
-    ORDER BY hour ASC
+    GROUP BY hour_timestamp
+    ORDER BY hour_timestamp ASC
     """
     async with db.pool.acquire() as conn:
         rows = await conn.fetch(sql, window_hours)
