@@ -64,6 +64,11 @@ export type LineDetail = {
   sample_size: number
 }
 
+export type DelayDistributionBucket = {
+  bucket_seconds: number
+  departures: number
+}
+
 type WorstLinesResponse = WorstLine[] | { rows?: WorstLine[]; data?: WorstLine[] }
 type MonitoredStopsResponse = MonitoredStop[] | { rows?: MonitoredStop[]; data?: MonitoredStop[] }
 
@@ -206,6 +211,18 @@ export async function fetchLineDetails(windowMinutes: number = 60) {
     return data
   } catch (error) {
     console.warn('Failed to fetch line details from backend:', error)
+    return []
+  }
+}
+
+export async function fetchDelayDistribution(lineNumber: string, windowMinutes: number = 1440) {
+  try {
+    const { data } = await api.get<DelayDistributionBucket[]>(`/api/v1/delays/distribution/${lineNumber}`, {
+      params: { window_minutes: windowMinutes },
+    })
+    return data
+  } catch (error) {
+    console.warn('Failed to fetch delay distribution from backend:', error)
     return []
   }
 }
