@@ -124,16 +124,17 @@ export function DashboardPage() {
     return Object.fromEntries(entries)
   }, [lineColorsQuery.data])
 
-  const getLineModeFromNumber = (lineNumber: string): LineMode => {
-    const num = lineNumber.trim().toUpperCase()
-    
-    if (num.startsWith('2')) {
-      return 'Ferry'
+  const mapTransportModeToLineMode = (transportMode: string | null | undefined): LineMode => {
+    if (!transportMode) {
+      return 'Bus'
     }
     
-    const numericValue = parseInt(num, 10)
-    if (!isNaN(numericValue) && numericValue >= 1 && numericValue <= 13) {
+    const normalized = transportMode.toLowerCase()
+    if (normalized === 'tram') {
       return 'Tram'
+    }
+    if (normalized === 'ferry' || normalized === 'boat') {
+      return 'Ferry'
     }
     
     return 'Bus'
@@ -144,7 +145,7 @@ export function DashboardPage() {
       return [...worstLinesQuery.data]
         .map((line) => ({
           line: line.line_number,
-          mode: getLineModeFromNumber(line.line_number),
+          mode: mapTransportModeToLineMode(line.transport_mode),
           avgDelaySeconds: Math.round(line.avg_delay_seconds),
         }))
         .sort((a, b) => b.avgDelaySeconds - a.avgDelaySeconds)

@@ -36,7 +36,8 @@ def _extract_events(stop_gid: str, payload: dict, recorded_at: datetime) -> list
     events: list[DepartureDelayEvent] = []
 
     for dep in departures:
-        if _transport_mode(dep) not in ALLOWED_TRANSPORT_MODES:
+        transport_mode = _transport_mode(dep)
+        if transport_mode not in ALLOWED_TRANSPORT_MODES:
             continue
 
         planned = _parse_iso(dep.get("plannedTime") or dep.get("planned") or dep.get("scheduledTime"))
@@ -71,6 +72,7 @@ def _extract_events(stop_gid: str, payload: dict, recorded_at: datetime) -> list
                 delay_seconds=delay_seconds,
                 is_cancelled=is_cancelled,
                 realtime_missing=realtime_missing,
+                transport_mode=transport_mode,
             )
         )
 
@@ -82,7 +84,8 @@ def _extract_line_metadata(payload: dict) -> list[LineMetadata]:
     lines_seen: dict[str, LineMetadata] = {}
 
     for dep in departures:
-        if _transport_mode(dep) not in ALLOWED_TRANSPORT_MODES:
+        transport_mode = _transport_mode(dep)
+        if transport_mode not in ALLOWED_TRANSPORT_MODES:
             continue
 
         line_obj = dep.get("serviceJourney", {}).get("line") or dep.get("line") or {}
@@ -105,6 +108,7 @@ def _extract_line_metadata(payload: dict) -> list[LineMetadata]:
             background_color=str(background_color) if background_color else None,
             text_color=str(text_color) if text_color else None,
             border_color=str(border_color) if border_color else None,
+            transport_mode=transport_mode,
         )
 
     return list(lines_seen.values())

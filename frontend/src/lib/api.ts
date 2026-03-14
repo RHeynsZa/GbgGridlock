@@ -4,6 +4,7 @@ export type WorstLine = {
   line_number: string
   avg_delay_seconds: number
   sample_size: number
+  transport_mode: string | null
 }
 
 export type LineStyle = {
@@ -19,6 +20,7 @@ export type LineMetadata = {
   background_color: string | null
   text_color: string | null
   border_color: string | null
+  transport_mode: string | null
 }
 
 export type MonitoredStop = {

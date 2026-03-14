@@ -5,6 +5,7 @@ class WorstLine(BaseModel):
     line_number: str
     avg_delay_seconds: float
     sample_size: int
+    transport_mode: str | None = None
 
 
 class DelayDistributionBucket(BaseModel):
@@ -29,6 +30,7 @@ class LineMetadata(BaseModel):
     background_color: str | None = None
     text_color: str | None = None
     border_color: str | None = None
+    transport_mode: str | None = None
 
 
 class DebugMetrics(BaseModel):
