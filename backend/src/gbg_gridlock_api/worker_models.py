@@ -13,6 +13,7 @@ class DepartureDelayEvent:
     delay_seconds: int | None
     is_cancelled: bool
     realtime_missing: bool
+    transport_mode: str | None
 
 
 @dataclass(slots=True)
@@ -22,3 +23,4 @@ class LineMetadata:
     background_color: str | None
     text_color: str | None
     border_color: str | None
+    transport_mode: str | None
