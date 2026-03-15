@@ -8,7 +8,7 @@ GbgGridlock is a real-time transit analytics dashboard for the Gothenburg Västt
 ---
 
 ## Global Repository Rules
-* **Language:** Python 3.12+ (Backend/Worker), TypeScript (Frontend), standard SQL.
+* **Language:** Python 3.12+ (Backend), TypeScript (Frontend), standard SQL.
 * **Paradigm:** Asynchronous first. Use `async`/`await` patterns for all network and database I/O.
 * **Error Handling:** Fail gracefully. Network APIs are fragile; expect `HTTP 429 Too Many Requests` and `HTTP 500` errors from the transit API and handle them with exponential backoff.
 * **Timezones:** All timestamps must be handled, stored, and parsed in UTC, and explicitly converted to `Europe/Stockholm` only at the final presentation layer in the frontend.
@@ -18,32 +18,25 @@ GbgGridlock is a real-time transit analytics dashboard for the Gothenburg Västt
 
 ## Agent-Specific Instructions
 
-### 1. The Ingestion Agent (Background Worker)
-This is the autonomous engine of the application, responsible for polling the Västtrafik API.
-* **Core Libraries:** `httpx` (for async HTTP requests), `apscheduler` (for cron-like interval execution), `asyncpg` (for database inserts).
+### 1. The Backend API Agent (FastAPI with Integrated Worker)
+The backend serves aggregated data to the frontend and includes an optional integrated polling worker for ingesting real-time data from the Västtrafik API.
+* **Core Libraries:** `fastapi`, `pydantic`, `asyncpg`, `httpx` (for async HTTP requests), `apscheduler` (for cron-like interval execution).
 * **Strict Rules:**
+  * API endpoints must be strictly read-only (`GET`).
+  * Response models must be strictly typed using Pydantic.
+  * Do not expose raw internal `journey_gid` or `stop_gid` values to the frontend unless absolutely necessary; map them to human-readable stop names and line numbers.
+  * **Worker Mode:** When enabled (`ENABLE_WORKER=true`), the worker polls the Västtrafik API every 60 seconds using `asyncio.Semaphore` (max 5 concurrent connections) and manages OAuth2 Bearer tokens independently, requesting refresh only when TTL drops below 5 minutes.
   * Do not use `requests` or `aiohttp`. Only use `httpx.AsyncClient`.
-  * API calls must be throttled using an `asyncio.Semaphore` (max 5 concurrent connections).
-  * The agent must independently manage its own OAuth2 Bearer token, requesting a refresh only when the TTL drops below 5 minutes.
-  * Execute exactly one polling cycle every 60 seconds against the predefined list of chokepoint `stopAreaGid`s.
 
 ### 2. The Database Agent (TimescaleDB)
 All data persistence rules for the PostgreSQL/TimescaleDB layer.
 * **Core Paradigm:** Time-series optimization. 
 * **Strict Rules:**
   * The primary table `departure_logs` must be configured as a TimescaleDB hypertable partitioned on the `recorded_at` column.
-  * Never use ORMs (like SQLAlchemy or Prisma) for bulk ingestion. The Ingestion Agent must use raw SQL `executemany` for high-throughput inserts.
+  * Never use ORMs (like SQLAlchemy or Prisma) for bulk ingestion. The worker must use raw SQL `executemany` for high-throughput inserts.
   * Build materialized views for heavy aggregations (e.g., daily route averages) rather than running expensive queries on the raw hypertable on every frontend load.
 
-### 3. The Backend API Agent (FastAPI)
-The intermediary layer serving aggregated data to the frontend.
-* **Core Libraries:** `fastapi`, `pydantic`, `asyncpg`.
-* **Strict Rules:**
-  * Endpoints must be strictly read-only (`GET`).
-  * Response models must be strictly typed using Pydantic.
-  * Do not expose raw internal `journey_gid` or `stop_gid` values to the frontend unless absolutely necessary; map them to human-readable stop names and line numbers.
-
-### 4. The Frontend Agent (React/TypeScript)
+### 3. The Frontend Agent (React/TypeScript)
 The UI layer visualizing the transit pain points.
 * **Core Libraries:** React, TypeScript, Tailwind CSS, `shadcn/ui`, TanStack Router, TanStack Query, Recharts.
 * **Strict Rules:**
@@ -62,9 +55,8 @@ The UI layer visualizing the transit pain points.
 | Service | Stack | Port | Start command |
 |---------|-------|------|---------------|
 | TimescaleDB | Docker (`timescale/timescaledb:latest-pg16`) | 5432 | See below |
-| Backend API | Python 3.12 / FastAPI / asyncpg | 8000 | `cd backend && uvicorn gbg_gridlock_api.main:app --reload --port 8000` |
+| Backend API (with integrated worker) | Python 3.12 / FastAPI / asyncpg / httpx / APScheduler | 8000 | `cd backend && uvicorn gbg_gridlock_api.main:app --reload --port 8000` (Set `ENABLE_WORKER=true` and `VT_CLIENT_ID` / `VT_CLIENT_SECRET` to enable polling) |
 | Frontend | React 18 / Vite / TypeScript | 5173 | `cd frontend && VITE_API_BASE_URL=http://localhost:8000 npm run dev` |
-| Ingestion Worker | Python 3.12 / httpx / APScheduler | N/A | Optional; needs `VT_CLIENT_ID` / `VT_CLIENT_SECRET` secrets |
 
 ### Starting TimescaleDB (Docker-in-Docker gotcha)
 
@@ -87,7 +79,6 @@ docker exec -i gbggridlock-db psql -U gbg -d gbggridlock < /workspace/db/deploy/
 ### Running tests
 
 * **Backend:** `cd backend && python3 -m pytest tests/ -v` (uses monkeypatched fakes; no DB needed)
-* **Worker:** `cd worker && python3 -m pytest tests/ -v` (uses monkeypatched fakes; no DB needed)
 * **Frontend build:** `cd frontend && npm run build` (Vite build; verifies compilation)
 * **Frontend E2E:** `cd frontend && npx playwright test` (requires `npx playwright install chromium` first; uses preview server on port 4173)
 

@@ -4,8 +4,7 @@ GbgGridlock is a real-time analytics dashboard for visualizing transit pain poin
 
 ## Monorepo layout
 
-- `worker/` – Async polling ingestion service (Planera Resa v4 -> TimescaleDB)
-- `backend/` – FastAPI aggregation API for dashboard consumption
+- `backend/` – FastAPI aggregation API with integrated polling worker for dashboard consumption
 - `frontend/` – React dashboard UI (wall of shame, route deep dive, health indicator)
 - `backend/alembic/` – Alembic migrations for TimescaleDB schema lifecycle
 
@@ -30,25 +29,18 @@ cd backend && uv run alembic upgrade head
 
 If Docker itself fails with `unshare: operation not permitted`, the host/container runtime is blocking required kernel features. In that case, run the DB step on a machine/runner with privileged Docker support.
 
-### 2) Backend API
+### 2) Backend API (with integrated worker)
 
 ```bash
 cd backend
 cp .env.example .env
+# Edit .env to set VT_CLIENT_ID, VT_CLIENT_SECRET, VT_AUTH_KEY
+# Set ENABLE_WORKER=true to enable polling
 pip install -e .
 uvicorn gbg_gridlock_api.main:app --reload --port 8000
 ```
 
-### 3) Ingestion worker
-
-```bash
-cd worker
-cp .env.example .env
-pip install -e .
-python -m gbg_gridlock_worker.main
-```
-
-### 4) Frontend
+### 3) Frontend
 
 ```bash
 cd frontend
@@ -94,8 +86,7 @@ For local frontend development without analytics, no secrets are required.
 
 When you change code in a component, run that component's checks before opening a PR:
 
-- **Backend changes:** `cd backend && PYTHONPATH=src python3 -m pytest tests/ -v`
-- **Worker changes:** `cd worker && PYTHONPATH=src python3 -m pytest tests/ -v`
+- **Backend changes:** `cd backend && python3 -m pytest tests/ -v`
 - **Frontend changes (required):**
   - `cd frontend && npm run build`
   - `cd frontend && npx playwright install chromium` (first run only)
@@ -106,6 +97,6 @@ The frontend smoke test runs against the built preview app, so running only `npm
 
 ## Notes
 
-- The worker uses OAuth2 client credentials and caches tokens until near expiry.
+- The backend includes an integrated polling worker that uses OAuth2 client credentials and caches tokens until near expiry.
 - Polling is every 60 seconds with an `asyncio.Semaphore(5)` concurrency guard.
-- Stop-area polling targets should be maintained in `worker/src/gbg_gridlock_worker/config.py`.
+- Stop-area polling targets are maintained in `backend/src/gbg_gridlock_api/monitored_stops.py`.
