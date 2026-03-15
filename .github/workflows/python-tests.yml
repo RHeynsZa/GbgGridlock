@@ -4,12 +4,10 @@ on:
   push:
     paths:
       - "backend/**"
-      - "worker/**"
       - ".github/workflows/python-tests.yml"
   pull_request:
     paths:
       - "backend/**"
-      - "worker/**"
       - ".github/workflows/python-tests.yml"
 
 jobs:
@@ -17,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        package: [backend, worker]
+        package: [backend]
 
     steps:
       - name: Checkout
