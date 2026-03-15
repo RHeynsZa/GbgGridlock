@@ -541,6 +541,18 @@ class TestPollCycleIntegration:
                 }
             ]
         })
+        mock_vt_client.fetch_arrivals = AsyncMock(return_value={
+            "results": [
+                {
+                    "serviceJourney": {
+                        "gid": "9015014500600456",
+                        "line": {"shortName": "11", "transportMode": "tram"}
+                    },
+                    "plannedTime": "2026-03-15T10:05:00Z",
+                    "estimatedTime": "2026-03-15T10:06:00Z"
+                }
+            ]
+        })
         
         inserted_events = []
         
@@ -576,16 +588,18 @@ class TestPollCycleIntegration:
         await run_poll_cycle(fake_pool, mock_vt_client, http_concurrency=5)
         
         assert mock_vt_client.fetch_departures.call_count == 2
-        assert len(inserted_events) == 2
+        assert mock_vt_client.fetch_arrivals.call_count == 2
+        assert len(inserted_events) == 4
 
     @pytest.mark.anyio
     async def test_run_poll_cycle_continues_on_individual_stop_failure(self, monkeypatch):
         """Poll cycle should continue even if one stop fails."""
-        call_count = 0
+        departures_call_count = 0
+        arrivals_call_count = 0
         
         async def mock_fetch_departures(http_client, stop_gid):
-            nonlocal call_count
-            call_count += 1
+            nonlocal departures_call_count
+            departures_call_count += 1
             if stop_gid == "9021014001760000":
                 raise Exception("API timeout")
             return {
@@ -601,8 +615,14 @@ class TestPollCycleIntegration:
                 ]
             }
         
+        async def mock_fetch_arrivals(http_client, stop_gid):
+            nonlocal arrivals_call_count
+            arrivals_call_count += 1
+            return {"results": []}
+        
         mock_vt_client = Mock()
         mock_vt_client.fetch_departures = mock_fetch_departures
+        mock_vt_client.fetch_arrivals = mock_fetch_arrivals
         
         inserted_events = []
         
@@ -637,7 +657,7 @@ class TestPollCycleIntegration:
         
         await run_poll_cycle(fake_pool, mock_vt_client, http_concurrency=5)
         
-        assert call_count == 2
+        assert departures_call_count == 2
         assert len(inserted_events) == 1
 
     @pytest.mark.anyio

@@ -173,10 +173,16 @@ async def run_poll_cycle(pool: asyncpg.Pool, vt_client: VasttrafikClient, http_c
             async with semaphore:
                 started = time.perf_counter()
                 try:
-                    payload = await vt_client.fetch_departures(http_client, stop_gid)
+                    departures_payload = await vt_client.fetch_departures(http_client, stop_gid)
+                    arrivals_payload = await vt_client.fetch_arrivals(http_client, stop_gid)
                     duration_ms = (time.perf_counter() - started) * 1000
                     record_poll_request(duration_ms=duration_ms, success=True, recorded_at=recorded_at)
-                    return _extract_events(stop_gid, payload, recorded_at), True
+                    
+                    departure_events = _extract_events(stop_gid, departures_payload, recorded_at)
+                    arrival_events = _extract_events(stop_gid, arrivals_payload, recorded_at)
+                    
+                    all_events = departure_events + arrival_events
+                    return all_events, True
                 except Exception as exc:
                     duration_ms = (time.perf_counter() - started) * 1000
                     record_poll_request(duration_ms=duration_ms, success=False, recorded_at=recorded_at)

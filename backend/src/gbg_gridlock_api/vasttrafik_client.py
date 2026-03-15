@@ -62,7 +62,22 @@ class VasttrafikClient:
 
         response = await client.get(
             f"{self._api_base_url}/stop-areas/{stop_area_gid}/departures",
-            params={"timeSpan": str(time_span), "transportModes": "tram,bus"},
+            params={"timeSpan": str(time_span), "transportModes": "tram,bus,ferry,boat"},
+            headers=request_headers,
+            timeout=20.0,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    async def fetch_arrivals(self, client: httpx.AsyncClient, stop_area_gid: str, time_span: int = 45) -> dict:
+        token = await self._ensure_token(client)
+        request_headers = {"Authorization": f"Bearer {token}"}
+        if self._auth_key:
+            request_headers["Ocp-Apim-Subscription-Key"] = self._auth_key
+
+        response = await client.get(
+            f"{self._api_base_url}/stop-areas/{stop_area_gid}/arrivals",
+            params={"timeSpan": str(time_span), "transportModes": "tram,bus,ferry,boat"},
             headers=request_headers,
             timeout=20.0,
         )
