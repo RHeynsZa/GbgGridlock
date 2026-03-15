@@ -62,7 +62,7 @@ class VasttrafikClient:
 
         response = await client.get(
             f"{self._api_base_url}/stop-areas/{stop_area_gid}/departures",
-            params={"timeSpan": str(time_span), "transportModes": "tram,bus"},
+            params={"timeSpan": str(time_span), "transportModes": "tram,bus,ferry,boat"},
             headers=request_headers,
             timeout=20.0,
         )
