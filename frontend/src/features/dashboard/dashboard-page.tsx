@@ -63,18 +63,33 @@ function mapTransportModeToLineMode(transportMode: string | null | undefined): L
   return 'Bus'
 }
 
+type TimeRange = {
+  label: string
+  minutes: number
+  hours?: number
+}
+
+const TIME_RANGES: TimeRange[] = [
+  { label: '1 hour', minutes: 60, hours: 1 },
+  { label: '6 hours', minutes: 360, hours: 6 },
+  { label: '24 hours', minutes: 1440, hours: 24 },
+  { label: '7 days', minutes: 10080, hours: 168 },
+  { label: '30 days', minutes: 43200, hours: 720 },
+]
+
 export function DashboardPage() {
   const { t, i18n } = useTranslation()
   const [selectedMode, setSelectedMode] = useState<'All' | LineMode>('All')
   const [selectedLine, setSelectedLine] = useState<string | null>(null)
   const [selectedStop, setSelectedStop] = useState<string>('all')
+  const [timeRange, setTimeRange] = useState<TimeRange>(TIME_RANGES[0])
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => document.documentElement.classList.contains('dark'))
 
   const lineColorsQuery = useQuery({ queryKey: ['line-colors'], queryFn: fetchLineColors })
   const monitoredStopsQuery = useQuery({ queryKey: ['monitored-stops'], queryFn: fetchMonitoredStops })
   const worstLinesQuery = useQuery({
-    queryKey: ['worst-lines-by-stop', selectedStop],
-    queryFn: () => fetchWorstLines(selectedStop === 'all' ? undefined : selectedStop),
+    queryKey: ['worst-lines-by-stop', selectedStop, timeRange.minutes],
+    queryFn: () => fetchWorstLines(selectedStop === 'all' ? undefined : selectedStop, timeRange.minutes),
   })
   const debugMetricsQuery = useQuery({
     queryKey: ['debug-metrics'],
@@ -82,24 +97,24 @@ export function DashboardPage() {
     refetchInterval: 30_000,
   })
   const networkStatsQuery = useQuery({
-    queryKey: ['network-stats'],
-    queryFn: () => fetchNetworkStats(60),
+    queryKey: ['network-stats', timeRange.minutes],
+    queryFn: () => fetchNetworkStats(timeRange.minutes),
   })
   const hourlyTrendQuery = useQuery({
-    queryKey: ['hourly-trend'],
-    queryFn: () => fetchHourlyTrend(24),
+    queryKey: ['hourly-trend', timeRange.hours],
+    queryFn: () => fetchHourlyTrend(timeRange.hours || 24),
   })
   const lineDetailsQuery = useQuery({
-    queryKey: ['line-details'],
-    queryFn: () => fetchLineDetails(60),
+    queryKey: ['line-details', timeRange.minutes],
+    queryFn: () => fetchLineDetails(timeRange.minutes),
   })
 
   const delayDistributionQuery = useQuery({
-    queryKey: ['delay-distribution', selectedLine],
+    queryKey: ['delay-distribution', selectedLine, timeRange.minutes],
     queryFn: () => {
       const lineToFetch = selectedLine || worstLinesQuery.data?.[0]?.line_number
       if (!lineToFetch) return Promise.resolve([])
-      return fetchDelayDistribution(lineToFetch, 1440)
+      return fetchDelayDistribution(lineToFetch, timeRange.minutes)
     },
     enabled: !!(selectedLine || worstLinesQuery.data?.[0]?.line_number),
   })
@@ -256,7 +271,10 @@ export function DashboardPage() {
               </CardDescription>
               <CardTitle className="text-2xl md:text-3xl">{kpi.value}</CardTitle>
             </CardHeader>
-            <CardContent className="text-xs text-muted-foreground">{kpi.note}</CardContent>
+            <CardContent className="text-xs text-muted-foreground">
+              {kpi.note}
+              <span className="mt-1 block font-medium text-primary/80">Last {timeRange.label}</span>
+            </CardContent>
           </Card>
         ))}
       </section>
@@ -268,6 +286,27 @@ export function DashboardPage() {
             <CardDescription>{t('filters.description')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="time-range-filter">
+                Time Range
+              </label>
+              <select 
+                id="time-range-filter" 
+                className="input-select" 
+                value={timeRange.label} 
+                onChange={(event) => {
+                  const selected = TIME_RANGES.find(tr => tr.label === event.target.value)
+                  if (selected) setTimeRange(selected)
+                }}
+              >
+                {TIME_RANGES.map((tr) => (
+                  <option key={tr.label} value={tr.label}>
+                    {tr.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="stop-filter">
                 {t('filters.stop')}
@@ -303,7 +342,7 @@ export function DashboardPage() {
         <Card className="xl:col-span-6">
           <CardHeader>
             <CardTitle>{t('charts.timelineTitle')}</CardTitle>
-            <CardDescription>{t('charts.timelineDesc')}</CardDescription>
+            <CardDescription>{t('charts.timelineDesc')} • Last {timeRange.label}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[250px] w-full sm:h-[320px]">
@@ -327,6 +366,7 @@ export function DashboardPage() {
                   <XAxis 
                     dataKey="hour" 
                     stroke="var(--muted-foreground)"
+                    style={{ fill: 'var(--muted-foreground)' }}
                     tickFormatter={(value) => {
                       // Format "2026-03-14 08:00" to show only time for single day, or date+time for multi-day
                       const parts = value.split(' ')
@@ -340,8 +380,21 @@ export function DashboardPage() {
                       return value
                     }}
                   />
-                  <YAxis stroke="var(--muted-foreground)" />
+                  <YAxis 
+                    stroke="var(--muted-foreground)"
+                    style={{ fill: 'var(--muted-foreground)' }}
+                  />
                   <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'var(--popover)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '8px',
+                      color: 'var(--popover-foreground)'
+                    }}
+                    labelStyle={{
+                      color: 'var(--foreground)',
+                      fontWeight: 600
+                    }}
                     labelFormatter={(value) => {
                       // Show full date and time in tooltip
                       return String(value).replace(' ', ' @ ')
@@ -357,80 +410,45 @@ export function DashboardPage() {
         </Card>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('charts.rankingTitle')}</CardTitle>
-            <CardDescription>{t('charts.rankingDesc')}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {lineDelayRanking.map((line) => {
-              const widthPercent = Math.max(10, Math.round((line.avgDelaySeconds / maxLineDelay) * 100))
-              return (
-                <div key={line.line} className="grid grid-cols-[70px_1fr_55px] items-center gap-2 sm:grid-cols-[80px_1fr_70px] sm:gap-3">
-                  <p className="text-sm font-medium">
-                    {translateMode(line.mode)} {line.line}
-                  </p>
-                  <div className="relative h-9 rounded-xl bg-muted/80 p-1">
-                    <div
-                      className="flex h-full items-center justify-end rounded-lg pr-2"
-                      style={{
-                        width: `${widthPercent}%`,
-                        backgroundColor: getLineStyle(line.line).backgroundColor,
-                        color: getLineStyle(line.line).textColor,
-                      }}
-                    >
-                      <span className="rounded-full bg-black/20 p-1">{getModeIcon(line.mode)}</span>
-                    </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('charts.rankingTitle')}</CardTitle>
+          <CardDescription>{t('charts.rankingDesc')} • Last {timeRange.label}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {lineDelayRanking.map((line) => {
+            const widthPercent = Math.max(10, Math.round((line.avgDelaySeconds / maxLineDelay) * 100))
+            return (
+              <div key={line.line} className="grid grid-cols-[70px_1fr_55px] items-center gap-2 sm:grid-cols-[80px_1fr_70px] sm:gap-3">
+                <p className="text-sm font-medium">
+                  {translateMode(line.mode)} {line.line}
+                </p>
+                <div className="relative h-9 rounded-xl bg-muted/80 p-1">
+                  <div
+                    className="flex h-full items-center justify-end rounded-lg pr-2"
+                    style={{
+                      width: `${widthPercent}%`,
+                      backgroundColor: getLineStyle(line.line).backgroundColor,
+                      color: getLineStyle(line.line).textColor,
+                    }}
+                  >
+                    <span className="rounded-full bg-background/40 p-1">{getModeIcon(line.mode)}</span>
                   </div>
-                  <p className="text-right text-sm font-semibold">{line.avgDelaySeconds}s</p>
                 </div>
-              )
-            })}
-            <p className="text-xs text-muted-foreground">
-              {lineColorsQuery.data && lineColorsQuery.data.length > 0 ? t('charts.colorsApi') : t('charts.colorsFallback')}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {t('charts.distributionTitle')}
-              {(selectedLine || worstLinesQuery.data?.[0]?.line_number) && (
-                <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  (Line {selectedLine || worstLinesQuery.data?.[0]?.line_number})
-                </span>
-              )}
-            </CardTitle>
-            <CardDescription>{t('charts.distributionDesc')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px] w-full sm:h-[320px]">
-              {delayDistributionData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={delayDistributionData} barCategoryGap="20%">
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                    <XAxis dataKey="delayRange" stroke="var(--muted-foreground)" />
-                    <YAxis stroke="var(--muted-foreground)" label={{ value: 'Departures', angle: -90, position: 'insideLeft' }} />
-                    <Tooltip />
-                    <Bar dataKey="departures" name="Departures" fill="#8B5CF6" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex h-full items-center justify-center text-muted-foreground">
-                  <p>{delayDistributionQuery.isLoading ? 'Loading...' : 'No delay distribution data available'}</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </section>
+                <p className="text-right text-sm font-semibold">{line.avgDelaySeconds}s</p>
+              </div>
+            )
+          })}
+          <p className="text-xs text-muted-foreground">
+            {lineColorsQuery.data && lineColorsQuery.data.length > 0 ? t('charts.colorsApi') : t('charts.colorsFallback')}
+          </p>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
           <CardTitle>{t('drilldown.title')}</CardTitle>
-          <CardDescription>{t('drilldown.description')}</CardDescription>
+          <CardDescription>{t('drilldown.description')} • Last {timeRange.label}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-2">
@@ -475,6 +493,63 @@ export function DashboardPage() {
           ) : (
             <p className="text-sm text-muted-foreground">{t('drilldown.empty')}</p>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            {t('charts.distributionTitle')}
+            {(selectedLine || worstLinesQuery.data?.[0]?.line_number) && (
+              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                (Line {selectedLine || worstLinesQuery.data?.[0]?.line_number})
+              </span>
+            )}
+          </CardTitle>
+          <CardDescription>{t('charts.distributionDesc')} • Last {timeRange.label}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[300px] w-full sm:h-[320px]">
+            {delayDistributionData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={delayDistributionData} barCategoryGap="20%">
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <XAxis 
+                    dataKey="delayRange" 
+                    stroke="var(--muted-foreground)"
+                    style={{ fill: 'var(--muted-foreground)' }}
+                  />
+                  <YAxis 
+                    stroke="var(--muted-foreground)" 
+                    label={{ 
+                      value: 'Departures', 
+                      angle: -90, 
+                      position: 'insideLeft',
+                      style: { fill: 'var(--muted-foreground)' }
+                    }}
+                    style={{ fill: 'var(--muted-foreground)' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'var(--popover)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '8px',
+                      color: 'var(--popover-foreground)'
+                    }}
+                    labelStyle={{
+                      color: 'var(--foreground)',
+                      fontWeight: 600
+                    }}
+                  />
+                  <Bar dataKey="departures" name="Departures" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-muted-foreground">
+                <p>{delayDistributionQuery.isLoading ? 'Loading...' : 'No delay distribution data available'}</p>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
