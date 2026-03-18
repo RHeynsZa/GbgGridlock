@@ -350,3 +350,159 @@ async def test_delay_distribution_endpoint_returns_bucketed_delays(monkeypatch):
     assert len(conn.calls) == 1
     _, args = conn.calls[0]
     assert args == ("5", 360)
+
+
+@pytest.mark.anyio
+async def test_transport_mode_exposed_in_worst_lines_endpoint_for_all_modes(monkeypatch):
+    """Test that transport_mode is properly exposed for tram, bus, and ferry."""
+    conn = FakeConn(
+        rows=[
+            {"line_number": "5", "avg_delay_seconds": 120.5, "sample_size": 15, "transport_mode": "tram"},
+            {"line_number": "16", "avg_delay_seconds": 105.2, "sample_size": 12, "transport_mode": "bus"},
+            {"line_number": "285", "avg_delay_seconds": 95.8, "sample_size": 8, "transport_mode": "ferry"},
+            {"line_number": "286", "avg_delay_seconds": 88.3, "sample_size": 6, "transport_mode": "boat"},
+        ]
+    )
+    monkeypatch.setattr(main.db, "_pool", FakePool(conn))
+
+    async with AsyncClient(transport=ASGITransport(app=main.app), base_url="http://test") as client:
+        response = await client.get("/api/v1/delays/worst-lines", params={"window_minutes": 60, "limit": 50})
+
+    assert response.status_code == 200
+    data = response.json()
+    
+    assert len(data) == 4
+    assert data[0]["transport_mode"] == "tram"
+    assert data[1]["transport_mode"] == "bus"
+    assert data[2]["transport_mode"] == "ferry"
+    assert data[3]["transport_mode"] == "boat"
+    
+    assert data[2]["line_number"] == "285"
+    assert data[3]["line_number"] == "286"
+
+
+@pytest.mark.anyio
+async def test_transport_mode_exposed_in_line_details_endpoint(monkeypatch):
+    """Test that transport_mode is properly exposed in line details including ferry."""
+    conn = FakeConn(
+        rows=[
+            {
+                "line_number": "7",
+                "transport_mode": "tram",
+                "avg_delay_seconds": 85.2,
+                "on_time_rate_percent": 72.5,
+                "canceled_trips": 2,
+                "sample_size": 120,
+            },
+            {
+                "line_number": "18",
+                "transport_mode": "bus",
+                "avg_delay_seconds": 98.7,
+                "on_time_rate_percent": 65.3,
+                "canceled_trips": 4,
+                "sample_size": 150,
+            },
+            {
+                "line_number": "285",
+                "transport_mode": "ferry",
+                "avg_delay_seconds": 62.1,
+                "on_time_rate_percent": 88.2,
+                "canceled_trips": 1,
+                "sample_size": 45,
+            },
+        ]
+    )
+    monkeypatch.setattr(main.db, "_pool", FakePool(conn))
+
+    async with AsyncClient(transport=ASGITransport(app=main.app), base_url="http://test") as client:
+        response = await client.get("/api/v1/lines/details", params={"window_minutes": 60})
+
+    assert response.status_code == 200
+    data = response.json()
+    
+    assert len(data) == 3
+    
+    tram_line = next(line for line in data if line["line_number"] == "7")
+    assert tram_line["transport_mode"] == "tram"
+    
+    bus_line = next(line for line in data if line["line_number"] == "18")
+    assert bus_line["transport_mode"] == "bus"
+    
+    ferry_line = next(line for line in data if line["line_number"] == "285")
+    assert ferry_line["transport_mode"] == "ferry"
+    assert ferry_line["avg_delay_seconds"] == 62.1
+
+
+@pytest.mark.anyio
+async def test_transport_mode_exposed_in_line_metadata_endpoint(monkeypatch):
+    """Test that transport_mode is properly exposed in line metadata for all modes."""
+    conn = FakeConn(
+        rows=[
+            {
+                "line_number": "10",
+                "foreground_color": "006c93",
+                "background_color": "d8e8b0",
+                "text_color": None,
+                "border_color": "d8e8b0",
+                "transport_mode": "tram",
+            },
+            {
+                "line_number": "55",
+                "foreground_color": "ffffff",
+                "background_color": "0072B2",
+                "text_color": None,
+                "border_color": "0072B2",
+                "transport_mode": "bus",
+            },
+            {
+                "line_number": "286",
+                "foreground_color": "ffffff",
+                "background_color": "264653",
+                "text_color": None,
+                "border_color": "264653",
+                "transport_mode": "ferry",
+            },
+        ]
+    )
+    monkeypatch.setattr(main.db, "_pool", FakePool(conn))
+    main._line_metadata_cache = []
+    main._line_metadata_cache_expiry = None
+
+    async with AsyncClient(transport=ASGITransport(app=main.app), base_url="http://test") as client:
+        response = await client.get("/api/v1/lines/metadata")
+
+    assert response.status_code == 200
+    data = response.json()
+    
+    assert len(data) == 3
+    
+    tram_metadata = next(line for line in data if line["line_number"] == "10")
+    assert tram_metadata["transport_mode"] == "tram"
+    
+    bus_metadata = next(line for line in data if line["line_number"] == "55")
+    assert bus_metadata["transport_mode"] == "bus"
+    
+    ferry_metadata = next(line for line in data if line["line_number"] == "286")
+    assert ferry_metadata["transport_mode"] == "ferry"
+
+
+@pytest.mark.anyio
+async def test_transport_mode_null_handling_in_api_responses(monkeypatch):
+    """Test that null transport_mode values are properly handled in API responses."""
+    conn = FakeConn(
+        rows=[
+            {"line_number": "UNKNOWN", "avg_delay_seconds": 75.0, "sample_size": 10, "transport_mode": None},
+            {"line_number": "5", "avg_delay_seconds": 90.5, "sample_size": 15, "transport_mode": "tram"},
+        ]
+    )
+    monkeypatch.setattr(main.db, "_pool", FakePool(conn))
+
+    async with AsyncClient(transport=ASGITransport(app=main.app), base_url="http://test") as client:
+        response = await client.get("/api/v1/delays/worst-lines", params={"window_minutes": 60})
+
+    assert response.status_code == 200
+    data = response.json()
+    
+    assert len(data) == 2
+    assert data[0]["transport_mode"] is None
+    assert data[1]["transport_mode"] == "tram"
