@@ -1,0 +1,376 @@
+{
+  "results": [
+    {
+      "detailsReference": "eyJUIjpbeyJSIjoiMXwzNDg3N3w0fDgwfDE4MDMyMDI2IiwiSSI6MH1dfQ",
+      "serviceJourney": {
+        "gid": "9015014500706419",
+        "direction": "Bergsjön",
+        "directionDetails": {
+          "fullDirection": "Bergsjön",
+          "shortDirection": "Bergsjön"
+        },
+        "line": {
+          "gid": "9011014500700000",
+          "name": "Spårvagn 7",
+          "shortName": "7",
+          "designation": "7",
+          "backgroundColor": "#764712",
+          "foregroundColor": "#ffffff",
+          "borderColor": "#764712",
+          "transportMode": "tram",
+          "transportSubMode": "none",
+          "isWheelchairAccessible": true,
+          "isRealtimeJourney": false
+        }
+      },
+      "stopPoint": {
+        "gid": "9022014001760006",
+        "name": "Brunnsparken, Göteborg",
+        "platform": "C2",
+        "latitude": 57.70669915,
+        "longitude": 11.96977967
+      },
+      "plannedTime": "2026-03-18T20:01:00.0000000+01:00",
+      "estimatedTime": "2026-03-18T20:04:00.0000000+01:00",
+      "estimatedOtherwisePlannedTime": "2026-03-18T20:04:00.0000000+01:00",
+      "isCancelled": false,
+      "isPartCancelled": false
+    },
+    {
+      "detailsReference": "eyJUIjpbeyJSIjoiMXwzNDk1MnwwfDgwfDE4MDMyMDI2IiwiSSI6MH1dfQ",
+      "serviceJourney": {
+        "gid": "9015014501006506",
+        "direction": "Guldheden via Grönsakstorget",
+        "directionDetails": {
+          "fullDirection": "Guldheden via Grönsakstorget",
+          "shortDirection": "Guldheden",
+          "via": "Grönsakstorget"
+        },
+        "line": {
+          "gid": "9011014501000000",
+          "name": "Spårvagn 10",
+          "shortName": "10",
+          "designation": "10",
+          "backgroundColor": "#d8e8b0",
+          "foregroundColor": "#006c93",
+          "borderColor": "#d8e8b0",
+          "transportMode": "tram",
+          "transportSubMode": "none",
+          "isWheelchairAccessible": true,
+          "isRealtimeJourney": false
+        }
+      },
+      "stopPoint": {
+        "gid": "9022014001760001",
+        "name": "Brunnsparken, Göteborg",
+        "platform": "A1",
+        "latitude": 57.70703012,
+        "longitude": 11.96783782
+      },
+      "plannedTime": "2026-03-18T20:04:00.0000000+01:00",
+      "estimatedTime": "2026-03-18T20:04:00.0000000+01:00",
+      "estimatedOtherwisePlannedTime": "2026-03-18T20:04:00.0000000+01:00",
+      "isCancelled": false,
+      "isPartCancelled": false
+    },
+    {
+      "detailsReference": "eyJUIjpbeyJSIjoiMXwxMDEyOXwwfDgwfDE4MDMyMDI2IiwiSSI6MH1dfQ",
+      "serviceJourney": {
+        "gid": "9015014500206500",
+        "direction": "Högsbotorp",
+        "directionDetails": {
+          "fullDirection": "Högsbotorp",
+          "shortDirection": "Högsbotorp"
+        },
+        "line": {
+          "gid": "9011014500200000",
+          "name": "Spårvagn 2",
+          "shortName": "2",
+          "designation": "2",
+          "backgroundColor": "#ffdd00",
+          "foregroundColor": "#006c93",
+          "borderColor": "#ffdd00",
+          "transportMode": "tram",
+          "transportSubMode": "none",
+          "isWheelchairAccessible": true,
+          "isRealtimeJourney": false
+        }
+      },
+      "stopPoint": {
+        "gid": "9022014001760005",
+        "name": "Brunnsparken, Göteborg",
+        "platform": "C1",
+        "latitude": 57.70658497,
+        "longitude": 11.96876497
+      },
+      "plannedTime": "2026-03-18T20:00:00.0000000+01:00",
+      "estimatedTime": "2026-03-18T20:05:00.0000000+01:00",
+      "estimatedOtherwisePlannedTime": "2026-03-18T20:05:00.0000000+01:00",
+      "isCancelled": false,
+      "isPartCancelled": false
+    },
+    {
+      "detailsReference": "eyJUIjpbeyJSIjoiMXwzNDkzMHwwfDgwfDE4MDMyMDI2IiwiSSI6MH1dfQ",
+      "serviceJourney": {
+        "gid": "9015014500606433",
+        "direction": "Kortedala via Sahlgrenska",
+        "directionDetails": {
+          "fullDirection": "Kortedala via Sahlgrenska",
+          "shortDirection": "Kortedala",
+          "via": "Sahlgrenska"
+        },
+        "line": {
+          "gid": "9011014500600000",
+          "name": "Spårvagn 6",
+          "shortName": "6",
+          "designation": "6",
+          "backgroundColor": "#f89828",
+          "foregroundColor": "#00435c",
+          "borderColor": "#f89828",
+          "transportMode": "tram",
+          "transportSubMode": "none",
+          "isWheelchairAccessible": true,
+          "isRealtimeJourney": false
+        }
+      },
+      "stopPoint": {
+        "gid": "9022014001760001",
+        "name": "Brunnsparken, Göteborg",
+        "platform": "A1",
+        "latitude": 57.70703012,
+        "longitude": 11.96783782
+      },
+      "plannedTime": "2026-03-18T20:00:00.0000000+01:00",
+      "estimatedTime": "2026-03-18T20:05:00.0000000+01:00",
+      "estimatedOtherwisePlannedTime": "2026-03-18T20:05:00.0000000+01:00",
+      "isCancelled": false,
+      "isPartCancelled": false
+    },
+    {
+      "detailsReference": "eyJUIjpbeyJSIjoiMXw3NTYwfDN8ODB8MTgwMzIwMjYiLCJJIjowfV19",
+      "serviceJourney": {
+        "gid": "9015014500406443",
+        "direction": "Angered",
+        "directionDetails": {
+          "fullDirection": "Angered",
+          "shortDirection": "Angered"
+        },
+        "line": {
+          "gid": "9011014500400000",
+          "name": "Spårvagn 4",
+          "shortName": "4",
+          "designation": "4",
+          "backgroundColor": "#027446",
+          "foregroundColor": "#ffffff",
+          "borderColor": "#027446",
+          "transportMode": "tram",
+          "transportSubMode": "none",
+          "isWheelchairAccessible": true,
+          "isRealtimeJourney": false
+        }
+      },
+      "stopPoint": {
+        "gid": "9022014001760006",
+        "name": "Brunnsparken, Göteborg",
+        "platform": "C2",
+        "latitude": 57.70669915,
+        "longitude": 11.96977967
+      },
+      "plannedTime": "2026-03-18T20:03:00.0000000+01:00",
+      "estimatedTime": "2026-03-18T20:05:00.0000000+01:00",
+      "estimatedOtherwisePlannedTime": "2026-03-18T20:05:00.0000000+01:00",
+      "isCancelled": false,
+      "isPartCancelled": false
+    },
+    {
+      "detailsReference": "eyJUIjpbeyJSIjoiMXw0NjM2M3wwfDgwfDE4MDMyMDI2IiwiSSI6MH1dfQ",
+      "serviceJourney": {
+        "gid": "9015014510104041",
+        "direction": "Ullevi Norra",
+        "directionDetails": {
+          "fullDirection": "Ullevi Norra",
+          "shortDirection": "Ullevi Norra"
+        },
+        "line": {
+          "gid": "9011014510100000",
+          "name": "Spårvagn X",
+          "shortName": "X",
+          "designation": "X",
+          "backgroundColor": "#ffffff",
+          "foregroundColor": "#c63539",
+          "borderColor": "#c63539",
+          "transportMode": "tram",
+          "transportSubMode": "none",
+          "isWheelchairAccessible": false,
+          "isRealtimeJourney": false
+        }
+      },
+      "stopPoint": {
+        "gid": "9022014001760004",
+        "name": "Brunnsparken, Göteborg",
+        "platform": "B2",
+        "latitude": 57.70717751,
+        "longitude": 11.96948781
+      },
+      "plannedTime": "2026-03-18T20:04:00.0000000+01:00",
+      "estimatedTime": "2026-03-18T20:05:00.0000000+01:00",
+      "estimatedOtherwisePlannedTime": "2026-03-18T20:05:00.0000000+01:00",
+      "isCancelled": false,
+      "isPartCancelled": false
+    },
+    {
+      "detailsReference": "eyJUIjpbeyJSIjoiMXw3NjI4fDB8ODB8MTgwMzIwMjYiLCJJIjowfV19",
+      "serviceJourney": {
+        "gid": "9015014501106480",
+        "direction": "Saltholmen",
+        "directionDetails": {
+          "fullDirection": "Saltholmen",
+          "shortDirection": "Saltholmen"
+        },
+        "line": {
+          "gid": "9011014501100000",
+          "name": "Spårvagn 11",
+          "shortName": "11",
+          "designation": "11",
+          "backgroundColor": "#000000",
+          "foregroundColor": "#ffffff",
+          "borderColor": "#000000",
+          "transportMode": "tram",
+          "transportSubMode": "none",
+          "isWheelchairAccessible": true,
+          "isRealtimeJourney": false
+        }
+      },
+      "stopPoint": {
+        "gid": "9022014001760003",
+        "name": "Brunnsparken, Göteborg",
+        "platform": "B1",
+        "latitude": 57.70705395,
+        "longitude": 11.9684571
+      },
+      "plannedTime": "2026-03-18T20:05:00.0000000+01:00",
+      "estimatedTime": "2026-03-18T20:05:00.0000000+01:00",
+      "estimatedOtherwisePlannedTime": "2026-03-18T20:05:00.0000000+01:00",
+      "isCancelled": false,
+      "isPartCancelled": false
+    },
+    {
+      "detailsReference": "eyJUIjpbeyJSIjoiMXwzNDkwN3wxfDgwfDE4MDMyMDI2IiwiSSI6MH1dfQ",
+      "serviceJourney": {
+        "gid": "9015014500606375",
+        "direction": "Kortedala via Centralstationen",
+        "directionDetails": {
+          "fullDirection": "Kortedala via Centralstationen",
+          "shortDirection": "Kortedala",
+          "via": "Centralstationen"
+        },
+        "line": {
+          "gid": "9011014500600000",
+          "name": "Spårvagn 6",
+          "shortName": "6",
+          "designation": "6",
+          "backgroundColor": "#f89828",
+          "foregroundColor": "#00435c",
+          "borderColor": "#f89828",
+          "transportMode": "tram",
+          "transportSubMode": "none",
+          "isWheelchairAccessible": true,
+          "isRealtimeJourney": false
+        }
+      },
+      "stopPoint": {
+        "gid": "9022014001760006",
+        "name": "Brunnsparken, Göteborg",
+        "platform": "C2",
+        "latitude": 57.70669915,
+        "longitude": 11.96977967
+      },
+      "plannedTime": "2026-03-18T20:04:00.0000000+01:00",
+      "estimatedTime": "2026-03-18T20:06:00.0000000+01:00",
+      "estimatedOtherwisePlannedTime": "2026-03-18T20:06:00.0000000+01:00",
+      "isCancelled": false,
+      "isPartCancelled": false
+    },
+    {
+      "detailsReference": "eyJUIjpbeyJSIjoiMXwxNTU0MXwxfDgwfDE4MDMyMDI2IiwiSSI6MH1dfQ",
+      "serviceJourney": {
+        "gid": "9015014501800276",
+        "direction": "Backa",
+        "directionDetails": {
+          "fullDirection": "Backa",
+          "shortDirection": "Backa"
+        },
+        "line": {
+          "gid": "9011014501800000",
+          "name": "Buss 18",
+          "shortName": "18",
+          "designation": "18",
+          "backgroundColor": "#323232",
+          "foregroundColor": "#ffff50",
+          "borderColor": "#323232",
+          "transportMode": "bus",
+          "transportSubMode": "none",
+          "isWheelchairAccessible": true,
+          "isRealtimeJourney": false
+        }
+      },
+      "stopPoint": {
+        "gid": "9022014001760014",
+        "name": "Brunnsparken, Göteborg",
+        "platform": "A4",
+        "latitude": 57.70795736,
+        "longitude": 11.96752517
+      },
+      "plannedTime": "2026-03-18T20:06:00.0000000+01:00",
+      "estimatedTime": "2026-03-18T20:06:00.0000000+01:00",
+      "estimatedOtherwisePlannedTime": "2026-03-18T20:06:00.0000000+01:00",
+      "isCancelled": false,
+      "isPartCancelled": false
+    },
+    {
+      "detailsReference": "eyJUIjpbeyJSIjoiMXwzNDkyNnwwfDgwfDE4MDMyMDI2IiwiSSI6MH1dfQ",
+      "serviceJourney": {
+        "gid": "9015014501106425",
+        "direction": "Bergsjön",
+        "directionDetails": {
+          "fullDirection": "Bergsjön",
+          "shortDirection": "Bergsjön"
+        },
+        "line": {
+          "gid": "9011014501100000",
+          "name": "Spårvagn 11",
+          "shortName": "11",
+          "designation": "11",
+          "backgroundColor": "#000000",
+          "foregroundColor": "#ffffff",
+          "borderColor": "#000000",
+          "transportMode": "tram",
+          "transportSubMode": "none",
+          "isWheelchairAccessible": true,
+          "isRealtimeJourney": false
+        }
+      },
+      "stopPoint": {
+        "gid": "9022014001760006",
+        "name": "Brunnsparken, Göteborg",
+        "platform": "C2",
+        "latitude": 57.70669915,
+        "longitude": 11.96977967
+      },
+      "plannedTime": "2026-03-18T20:05:00.0000000+01:00",
+      "estimatedTime": "2026-03-18T20:06:00.0000000+01:00",
+      "estimatedOtherwisePlannedTime": "2026-03-18T20:06:00.0000000+01:00",
+      "isCancelled": false,
+      "isPartCancelled": false
+    }
+  ],
+  "pagination": {
+    "limit": 10,
+    "offset": 0,
+    "size": 10
+  },
+  "links": {
+    "next": "stop-areas/9021014001760000/departures?offset=10&limit=10",
+    "current": "stop-areas/9021014001760000/departures"
+  }
+}
