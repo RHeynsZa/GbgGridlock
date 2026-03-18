@@ -109,11 +109,13 @@ function normalizeMonitoredStops(payload: MonitoredStopsResponse): MonitoredStop
   return []
 }
 
-export async function fetchWorstLines(stopGid?: string) {
+export async function fetchWorstLines(stopGid?: string, windowMinutes: number = 60) {
   try {
-    const { data } = await api.get<WorstLinesResponse>('/api/v1/delays/by-stop', {
-      params: stopGid ? { stop_gid: stopGid } : undefined,
-    })
+    const params: Record<string, string | number> = { window_minutes: windowMinutes }
+    if (stopGid) {
+      params.stop_gid = stopGid
+    }
+    const { data } = await api.get<WorstLinesResponse>('/api/v1/delays/by-stop', { params })
     return normalizeWorstLines(data)
   } catch (error) {
     console.warn('Failed to fetch delay breakdown from backend:', error)
