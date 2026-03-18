@@ -61,10 +61,12 @@ class TestInsertEvents:
         assert rows[0][6] == 120
         assert rows[0][7] is False
         assert rows[0][8] is False
+        assert rows[0][9] == "tram"
         
         assert rows[1][5] is None
         assert rows[1][6] is None
         assert rows[1][8] is True
+        assert rows[1][9] == "tram"
 
     @pytest.mark.anyio
     async def test_insert_events_with_empty_list(self):
@@ -100,6 +102,7 @@ class TestInsertEvents:
         mock_conn.executemany.assert_called_once()
         _, rows = mock_conn.executemany.call_args[0]
         assert rows[0][7] is True
+        assert rows[0][9] == "tram"
 
     @pytest.mark.anyio
     async def test_insert_events_with_negative_delay(self):
@@ -126,6 +129,7 @@ class TestInsertEvents:
         mock_conn.executemany.assert_called_once()
         _, rows = mock_conn.executemany.call_args[0]
         assert rows[0][6] == -120
+        assert rows[0][9] == "tram"
 
 
 class TestUpsertLineMetadata:
@@ -164,8 +168,8 @@ class TestUpsertLineMetadata:
         assert "ON CONFLICT" in sql
         assert len(rows) == 2
         
-        assert rows[0] == ("5", "FFFFFF", "009E73", "000000", "009E73")
-        assert rows[1] == ("11", "000000", "F0E442", "111827", "F0E442")
+        assert rows[0] == ("5", "FFFFFF", "009E73", "000000", "009E73", "tram")
+        assert rows[1] == ("11", "000000", "F0E442", "111827", "F0E442", "tram")
 
     @pytest.mark.anyio
     async def test_upsert_line_metadata_with_partial_colors(self):
@@ -188,7 +192,7 @@ class TestUpsertLineMetadata:
         mock_conn.executemany.assert_called_once()
         _, rows = mock_conn.executemany.call_args[0]
         
-        assert rows[0] == ("16", "FFFFFF", "D55E00", None, None)
+        assert rows[0] == ("16", "FFFFFF", "D55E00", None, None, "bus")
 
     @pytest.mark.anyio
     async def test_upsert_line_metadata_with_empty_list(self):
@@ -220,7 +224,109 @@ class TestUpsertLineMetadata:
         mock_conn.executemany.assert_called_once()
         _, rows = mock_conn.executemany.call_args[0]
         
-        assert rows[0] == ("EXPRESS", None, None, None, None)
+        assert rows[0] == ("EXPRESS", None, None, None, None, "bus")
+
+
+class TestTransportModeInsertion:
+    """Tests for transport_mode field insertion and update."""
+
+    @pytest.mark.anyio
+    async def test_insert_events_includes_transport_mode(self):
+        """Verify transport_mode is included in INSERT statement."""
+        events = [
+            DepartureDelayEvent(
+                recorded_at=datetime(2026, 3, 15, 10, 0, tzinfo=timezone.utc),
+                stop_gid="9021014001760000",
+                journey_gid="9015014500600123",
+                line_number="285",
+                planned_time=datetime(2026, 3, 15, 10, 5, tzinfo=timezone.utc),
+                estimated_time=datetime(2026, 3, 15, 10, 7, tzinfo=timezone.utc),
+                delay_seconds=120,
+                is_cancelled=False,
+                realtime_missing=False,
+                transport_mode="ferry",
+            )
+        ]
+        
+        mock_conn = AsyncMock()
+        await insert_events(mock_conn, events)
+        
+        sql, rows = mock_conn.executemany.call_args[0]
+        
+        assert "transport_mode" in sql
+        assert len(rows[0]) == 10
+        assert rows[0][9] == "ferry"
+
+    @pytest.mark.anyio
+    async def test_upsert_line_metadata_includes_transport_mode(self):
+        """Verify transport_mode is included in UPSERT statement."""
+        lines = [
+            LineMetadata(
+                line_number="285",
+                foreground_color="FFFFFF",
+                background_color="006D77",
+                text_color=None,
+                border_color="006D77",
+                transport_mode="ferry",
+            )
+        ]
+        
+        mock_conn = AsyncMock()
+        await upsert_line_metadata(mock_conn, lines)
+        
+        sql, rows = mock_conn.executemany.call_args[0]
+        
+        assert "transport_mode" in sql
+        assert "COALESCE(EXCLUDED.transport_mode, line_metadata.transport_mode)" in sql
+        assert len(rows[0]) == 6
+        assert rows[0][5] == "ferry"
+
+    @pytest.mark.anyio
+    async def test_insert_events_with_null_transport_mode(self):
+        """Handle NULL transport_mode values gracefully."""
+        events = [
+            DepartureDelayEvent(
+                recorded_at=datetime(2026, 3, 15, 10, 0, tzinfo=timezone.utc),
+                stop_gid="9021014001760000",
+                journey_gid="9015014500600999",
+                line_number="UNKNOWN",
+                planned_time=datetime(2026, 3, 15, 10, 5, tzinfo=timezone.utc),
+                estimated_time=datetime(2026, 3, 15, 10, 5, tzinfo=timezone.utc),
+                delay_seconds=0,
+                is_cancelled=False,
+                realtime_missing=False,
+                transport_mode=None,
+            )
+        ]
+        
+        mock_conn = AsyncMock()
+        await insert_events(mock_conn, events)
+        
+        _, rows = mock_conn.executemany.call_args[0]
+        assert rows[0][9] is None
+
+    @pytest.mark.anyio
+    async def test_upsert_line_metadata_updates_existing_null_transport_mode(self):
+        """Verify that UPSERT updates NULL transport_mode with new value."""
+        lines = [
+            LineMetadata(
+                line_number="5",
+                foreground_color=None,
+                background_color=None,
+                text_color=None,
+                border_color=None,
+                transport_mode="tram",
+            )
+        ]
+        
+        mock_conn = AsyncMock()
+        await upsert_line_metadata(mock_conn, lines)
+        
+        sql, rows = mock_conn.executemany.call_args[0]
+        
+        # Verify SQL uses COALESCE to prefer new value over existing NULL
+        assert "COALESCE(EXCLUDED.transport_mode, line_metadata.transport_mode)" in sql
+        assert rows[0][5] == "tram"
 
 
 class TestRepositoryEdgeCases:
@@ -283,4 +389,6 @@ class TestRepositoryEdgeCases:
         _, rows = mock_conn.executemany.call_args[0]
         
         assert rows[0][0] == "X4"
+        assert rows[0][5] == "bus"
         assert rows[1][0] == "BLUE EXPRESS"
+        assert rows[1][5] == "bus"
