@@ -228,151 +228,193 @@ export function DashboardPage() {
   const translateMode = (mode: LineMode | 'All') => t(`dashboard.modes.${mode.toLowerCase()}`)
 
   return (
-    <main className="mx-auto w-full max-w-[1400px] space-y-5 px-3 py-4 sm:px-6 lg:space-y-6 lg:px-10 lg:py-8">
-      <header className="relative overflow-hidden rounded-3xl border border-border/80 bg-card/85 p-5 shadow-[0_30px_80px_-35px_rgba(96,55,177,0.6)] backdrop-blur lg:p-8">
-        <div className="pointer-events-none absolute -right-14 -top-14 h-44 w-44 rounded-full bg-primary/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 left-6 h-44 w-44 rounded-full bg-blue-400/20 blur-3xl" />
+    <main className="min-h-screen w-full">
+      <div className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur-sm shadow-sm">
+        <div className="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md sm:h-12 sm:w-12">
+                <TramFront className="h-5 w-5 sm:h-6 sm:w-6" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold tracking-tight sm:text-2xl">GbgGridlock</h1>
+                <p className="text-xs text-muted-foreground sm:text-sm">{t('dashboard.subtitle')}</p>
+              </div>
+            </div>
 
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">{t('dashboard.badge')}</p>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">GbgGridlock</h1>
-            <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">{t('dashboard.subtitle')}</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
-            <button className="toggle-btn justify-center" type="button" onClick={toggleLanguage}>
-              <Languages className="h-4 w-4" /> {t('controls.language')}
-            </button>
-            <button className="toggle-btn justify-center" type="button" onClick={toggleTheme}>
-              {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />} {t('controls.theme')}
-            </button>
+            <div className="flex items-center gap-2">
+              <button className="toggle-btn" type="button" onClick={toggleLanguage} aria-label="Toggle language">
+                <Languages className="h-4 w-4" />
+                <span className="hidden sm:inline">{t('controls.language')}</span>
+              </button>
+              <button className="toggle-btn" type="button" onClick={toggleTheme} aria-label="Toggle theme">
+                {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                <span className="hidden sm:inline">{t('controls.theme')}</span>
+              </button>
+            </div>
           </div>
         </div>
-      </header>
+      </div>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          { title: t('kpis.networkDelay'), value: formatKpi(avgDelay, 's'), icon: <TriangleAlert className="h-4 w-4" />, note: t('kpis.networkDelayDesc') },
-          { title: t('kpis.p95Delay'), value: formatKpi(p95Delay, 's'), icon: <Waves className="h-4 w-4" />, note: t('kpis.p95DelayDesc') },
-          { title: t('kpis.reliability'), value: formatKpi(reliability, '%'), icon: <ArrowUpRight className="h-4 w-4" />, note: t('kpis.reliabilityDesc') },
-          {
-            title: t('kpis.cancellationRate'),
-            value: formatKpi(cancellationRate, '%'),
-            icon: <BusFront className="h-4 w-4" />,
-            note: t('kpis.cancellationRateDesc'),
-          },
-        ].map((kpi) => (
-          <Card key={kpi.title} className="kpi-card rounded-2xl">
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center justify-between gap-2 text-xs uppercase tracking-wide">
-                {kpi.title}
-                <span className="rounded-full bg-primary/10 p-2 text-primary">{kpi.icon}</span>
-              </CardDescription>
-              <CardTitle className="text-2xl md:text-3xl">{kpi.value}</CardTitle>
-            </CardHeader>
-            <CardContent className="text-xs text-muted-foreground">
-              {kpi.note}
-              <span className="mt-1 block font-medium text-primary/80">Last {timeRange.label}</span>
-            </CardContent>
-          </Card>
-        ))}
-      </section>
+      <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:space-y-8 lg:px-8 lg:py-8">
 
-      <section className="grid gap-4 xl:grid-cols-8">
-        <Card className="xl:col-span-2">
-          <CardHeader>
-            <CardTitle>{t('filters.title')}</CardTitle>
-            <CardDescription>{t('filters.description')}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="time-range-filter">
-                Time Range
-              </label>
-              <select 
-                id="time-range-filter" 
-                className="input-select" 
-                value={timeRange.label} 
-                onChange={(event) => {
-                  const selected = TIME_RANGES.find(tr => tr.label === event.target.value)
-                  if (selected) setTimeRange(selected)
-                }}
-              >
-                {TIME_RANGES.map((tr) => (
-                  <option key={tr.label} value={tr.label}>
-                    {tr.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+        <section>
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-foreground sm:text-xl">Network Overview</h2>
+            <p className="text-sm text-muted-foreground">Last {timeRange.label}</p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              { 
+                title: t('kpis.networkDelay'), 
+                value: formatKpi(avgDelay, 's'), 
+                icon: <TriangleAlert className="h-5 w-5" />, 
+                note: t('kpis.networkDelayDesc'),
+                color: 'text-warning'
+              },
+              { 
+                title: t('kpis.p95Delay'), 
+                value: formatKpi(p95Delay, 's'), 
+                icon: <Waves className="h-5 w-5" />, 
+                note: t('kpis.p95DelayDesc'),
+                color: 'text-error'
+              },
+              { 
+                title: t('kpis.reliability'), 
+                value: formatKpi(reliability, '%'), 
+                icon: <ArrowUpRight className="h-5 w-5" />, 
+                note: t('kpis.reliabilityDesc'),
+                color: 'text-success'
+              },
+              {
+                title: t('kpis.cancellationRate'),
+                value: formatKpi(cancellationRate, '%'),
+                icon: <BusFront className="h-5 w-5" />,
+                note: t('kpis.cancellationRateDesc'),
+                color: 'text-primary'
+              },
+            ].map((kpi) => (
+              <Card key={kpi.title} className="kpi-card rounded-xl">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <CardDescription className="text-xs font-medium uppercase tracking-wider">
+                      {kpi.title}
+                    </CardDescription>
+                    <div className={`rounded-lg bg-muted p-2 ${kpi.color}`}>
+                      {kpi.icon}
+                    </div>
+                  </div>
+                  <CardTitle className="mt-2 text-3xl font-bold md:text-4xl">{kpi.value}</CardTitle>
+                </CardHeader>
+                <CardContent className="text-xs text-muted-foreground">
+                  {kpi.note}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="stop-filter">
-                {t('filters.stop')}
-              </label>
-              <select id="stop-filter" className="input-select" value={selectedStop} onChange={(event) => setSelectedStop(event.target.value)}>
-                <option value="all">{t('filters.allStops')}</option>
-                {(monitoredStopsQuery.data ?? []).map((stop) => (
-                  <option key={stop.stop_gid} value={stop.stop_gid}>
-                    {stop.stop_name}
-                  </option>
-                ))}
-              </select>
-            </div>
+        <section className="grid gap-6 lg:grid-cols-12">
+          <div className="lg:col-span-3">
+            <Card className="rounded-xl shadow-md">
+              <CardHeader>
+                <CardTitle className="text-base">{t('filters.title')}</CardTitle>
+                <CardDescription className="text-xs">{t('filters.description')}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground" htmlFor="time-range-filter">
+                    Time Range
+                  </label>
+                  <select 
+                    id="time-range-filter" 
+                    className="input-select" 
+                    value={timeRange.label} 
+                    onChange={(event) => {
+                      const selected = TIME_RANGES.find(tr => tr.label === event.target.value)
+                      if (selected) setTimeRange(selected)
+                    }}
+                  >
+                    {TIME_RANGES.map((tr) => (
+                      <option key={tr.label} value={tr.label}>
+                        {tr.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-              {(['All', 'Tram', 'Bus'] as const).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  className={`chip justify-center text-center ${selectedMode === mode ? 'chip-active' : ''}`}
-                  onClick={() => {
-                    setSelectedMode(mode)
-                    setSelectedLine(null)
-                  }}
-                >
-                  {translateMode(mode)}
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground" htmlFor="stop-filter">
+                    {t('filters.stop')}
+                  </label>
+                  <select id="stop-filter" className="input-select" value={selectedStop} onChange={(event) => setSelectedStop(event.target.value)}>
+                    <option value="all">{t('filters.allStops')}</option>
+                    {(monitoredStopsQuery.data ?? []).map((stop) => (
+                      <option key={stop.stop_gid} value={stop.stop_gid}>
+                        {stop.stop_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-        <Card className="xl:col-span-6">
-          <CardHeader>
-            <CardTitle>{t('charts.timelineTitle')}</CardTitle>
-            <CardDescription>{t('charts.timelineDesc')} • Last {timeRange.label}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[250px] w-full sm:h-[320px]">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Transport Mode</label>
+                  <div className="flex flex-col gap-2">
+                    {(['All', 'Tram', 'Bus'] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        className={`chip justify-center ${selectedMode === mode ? 'chip-active' : ''}`}
+                        onClick={() => {
+                          setSelectedMode(mode)
+                          setSelectedLine(null)
+                        }}
+                      >
+                        {getModeIcon(mode as LineMode)}
+                        <span>{translateMode(mode)}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="lg:col-span-9">
+            <Card className="rounded-xl shadow-md">
+              <CardHeader>
+                <CardTitle className="text-base">{t('charts.timelineTitle')}</CardTitle>
+                <CardDescription className="text-xs">{t('charts.timelineDesc')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[280px] w-full sm:h-[360px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={hourlyTrendQuery.data ?? []}>
+                <AreaChart data={hourlyTrendQuery.data ?? []} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="tramGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#7E57FF" stopOpacity={0.45} />
-                      <stop offset="95%" stopColor="#7E57FF" stopOpacity={0} />
+                      <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.5} />
+                      <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="busGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#A06EFF" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#A06EFF" stopOpacity={0} />
+                      <stop offset="5%" stopColor="var(--chart-2)" stopOpacity={0.5} />
+                      <stop offset="95%" stopColor="var(--chart-2)" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="ferryGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#C4AEFF" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="#C4AEFF" stopOpacity={0} />
+                      <stop offset="5%" stopColor="var(--chart-3)" stopOpacity={0.5} />
+                      <stop offset="95%" stopColor="var(--chart-3)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} strokeOpacity={0.5} />
                   <XAxis 
                     dataKey="hour" 
                     stroke="var(--muted-foreground)"
-                    style={{ fill: 'var(--muted-foreground)' }}
+                    style={{ fill: 'var(--muted-foreground)', fontSize: '12px' }}
+                    tickLine={false}
+                    axisLine={{ stroke: 'var(--border)' }}
                     tickFormatter={(value) => {
-                      // Format "2026-03-14 08:00" to show only time for single day, or date+time for multi-day
                       const parts = value.split(' ')
                       if (parts.length === 2) {
                         const [date, time] = parts
-                        // For single-day view, just show time; for multi-day, show short date + time
                         const hourlyData = hourlyTrendQuery.data ?? []
                         const uniqueDates = new Set(hourlyData.map((d) => d.hour.split(' ')[0]))
                         return uniqueDates.size > 1 ? `${date.substring(5)} ${time.substring(0, 5)}` : time.substring(0, 5)
@@ -382,215 +424,296 @@ export function DashboardPage() {
                   />
                   <YAxis 
                     stroke="var(--muted-foreground)"
-                    style={{ fill: 'var(--muted-foreground)' }}
+                    style={{ fill: 'var(--muted-foreground)', fontSize: '12px' }}
+                    tickLine={false}
+                    axisLine={{ stroke: 'var(--border)' }}
+                    label={{ 
+                      value: 'Delay (s)', 
+                      angle: -90, 
+                      position: 'insideLeft',
+                      style: { fill: 'var(--muted-foreground)', fontSize: '12px' }
+                    }}
                   />
                   <Tooltip 
                     contentStyle={{
-                      backgroundColor: 'var(--popover)',
+                      backgroundColor: 'var(--card)',
                       border: '1px solid var(--border)',
                       borderRadius: '8px',
-                      color: 'var(--popover-foreground)'
+                      color: 'var(--card-foreground)',
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
                     }}
                     labelStyle={{
                       color: 'var(--foreground)',
-                      fontWeight: 600
+                      fontWeight: 600,
+                      marginBottom: '4px'
                     }}
-                    labelFormatter={(value) => {
-                      // Show full date and time in tooltip
-                      return String(value).replace(' ', ' @ ')
-                    }}
+                    labelFormatter={(value) => String(value).replace(' ', ' @ ')}
                   />
-                  <Area type="monotone" dataKey="tram" name={translateMode('Tram')} stroke="#7E57FF" fill="url(#tramGradient)" strokeWidth={2} />
-                  <Area type="monotone" dataKey="bus" name={translateMode('Bus')} stroke="#A06EFF" fill="url(#busGradient)" strokeWidth={2} />
-                  <Area type="monotone" dataKey="ferry" name={translateMode('Ferry')} stroke="#C4AEFF" fill="url(#ferryGradient)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="tram" name={translateMode('Tram')} stroke="var(--chart-1)" fill="url(#tramGradient)" strokeWidth={2.5} />
+                  <Area type="monotone" dataKey="bus" name={translateMode('Bus')} stroke="var(--chart-2)" fill="url(#busGradient)" strokeWidth={2.5} />
+                  <Area type="monotone" dataKey="ferry" name={translateMode('Ferry')} stroke="var(--chart-3)" fill="url(#ferryGradient)" strokeWidth={2.5} />
                 </AreaChart>
               </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        <Card className="rounded-xl shadow-md">
+          <CardHeader>
+            <CardTitle className="text-base">{t('charts.rankingTitle')}</CardTitle>
+            <CardDescription className="text-xs">{t('charts.rankingDesc')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {lineDelayRanking.length > 0 ? (
+              <>
+                {lineDelayRanking.map((line, index) => {
+                  const widthPercent = Math.max(10, Math.round((line.avgDelaySeconds / maxLineDelay) * 100))
+                  return (
+                    <div key={line.line} className="group cursor-pointer">
+                      <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-lg p-2 transition-colors hover:bg-muted/50">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-muted text-xs font-bold text-muted-foreground">
+                            {index + 1}
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            {getModeIcon(line.mode)}
+                            <p className="text-sm font-semibold">{line.line}</p>
+                          </div>
+                        </div>
+                        <div className="relative h-10 rounded-lg bg-muted">
+                          <div
+                            className="flex h-full items-center justify-end rounded-lg px-2 transition-all duration-300 group-hover:opacity-90"
+                            style={{
+                              width: `${widthPercent}%`,
+                              backgroundColor: getLineStyle(line.line).backgroundColor,
+                              color: getLineStyle(line.line).textColor,
+                            }}
+                          >
+                            <span className="text-xs font-bold">{line.avgDelaySeconds}s</span>
+                          </div>
+                        </div>
+                        <p className="text-right text-sm font-bold tabular-nums">{line.avgDelaySeconds}s</p>
+                      </div>
+                    </div>
+                  )
+                })}
+                <div className="mt-4 rounded-lg bg-muted/30 p-3">
+                  <p className="text-xs text-muted-foreground">
+                    {lineColorsQuery.data && lineColorsQuery.data.length > 0 ? t('charts.colorsApi') : t('charts.colorsFallback')}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <div className="flex h-32 items-center justify-center text-muted-foreground">
+                <p className="text-sm">No ranking data available</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-xl shadow-md">
+          <CardHeader>
+            <CardTitle className="text-base">{t('drilldown.title')}</CardTitle>
+            <CardDescription className="text-xs">{t('drilldown.description')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {filteredLines.length > 0 ? (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  {filteredLines.map((line) => (
+                    <button
+                      key={line.line}
+                      type="button"
+                      className={`chip flex items-center gap-1.5 ${selectedLine === line.line ? 'chip-active' : ''}`}
+                      style={
+                        selectedLine === line.line
+                          ? {
+                              borderColor: getLineStyle(line.line).borderColor,
+                              backgroundColor: getLineStyle(line.line).backgroundColor,
+                              color: getLineStyle(line.line).textColor,
+                            }
+                          : {}
+                      }
+                      onClick={() => setSelectedLine(line.line)}
+                    >
+                      {getModeIcon(line.mode)}
+                      <span>{line.line}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {selectedLineStats ? (
+                  <div className="rounded-xl border border-border bg-muted/30 p-5">
+                    <div className="mb-4 flex items-center gap-2">
+                      <div 
+                        className="flex h-10 w-10 items-center justify-center rounded-lg font-bold"
+                        style={{
+                          backgroundColor: getLineStyle(selectedLineStats.line).backgroundColor,
+                          color: getLineStyle(selectedLineStats.line).textColor,
+                        }}
+                      >
+                        {selectedLineStats.line}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">{translateMode(selectedLineStats.mode)} Line {selectedLineStats.line}</p>
+                        <p className="text-xs text-muted-foreground">Detailed statistics</p>
+                      </div>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('drilldown.avgDelay')}</p>
+                        <p className="text-2xl font-bold">{selectedLineStats.avgDelaySeconds}s</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('drilldown.ontime')}</p>
+                        <p className="text-2xl font-bold text-success">{selectedLineStats.onTimeRate}%</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('drilldown.cancellations')}</p>
+                        <p className="text-2xl font-bold text-error">{selectedLineStats.canceledTrips}</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex h-24 items-center justify-center rounded-lg border border-dashed border-border">
+                    <p className="text-sm text-muted-foreground">{t('drilldown.empty')}</p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex h-32 items-center justify-center text-muted-foreground">
+                <p className="text-sm">No line data available for selected filters</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-xl shadow-md">
+          <CardHeader>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle className="text-base">
+                  {t('charts.distributionTitle')}
+                  {(selectedLine || worstLinesQuery.data?.[0]?.line_number) && (
+                    <span className="ml-2 text-sm font-normal text-muted-foreground">
+                      (Line {selectedLine || worstLinesQuery.data?.[0]?.line_number})
+                    </span>
+                  )}
+                </CardTitle>
+                <CardDescription className="text-xs">{t('charts.distributionDesc')}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[320px] w-full sm:h-[360px]">
+              {delayDistributionData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={delayDistributionData} barCategoryGap="20%" margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} strokeOpacity={0.5} />
+                    <XAxis 
+                      dataKey="delayRange" 
+                      stroke="var(--muted-foreground)"
+                      style={{ fill: 'var(--muted-foreground)', fontSize: '12px' }}
+                      tickLine={false}
+                      axisLine={{ stroke: 'var(--border)' }}
+                    />
+                    <YAxis 
+                      stroke="var(--muted-foreground)" 
+                      label={{ 
+                        value: 'Departures', 
+                        angle: -90, 
+                        position: 'insideLeft',
+                        style: { fill: 'var(--muted-foreground)', fontSize: '12px' }
+                      }}
+                      style={{ fill: 'var(--muted-foreground)', fontSize: '12px' }}
+                      tickLine={false}
+                      axisLine={{ stroke: 'var(--border)' }}
+                    />
+                    <Tooltip 
+                      contentStyle={{
+                        backgroundColor: 'var(--card)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '8px',
+                        color: 'var(--card-foreground)',
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                      }}
+                      labelStyle={{
+                        color: 'var(--foreground)',
+                        fontWeight: 600,
+                        marginBottom: '4px'
+                      }}
+                    />
+                    <Bar 
+                      dataKey="departures" 
+                      name="Departures" 
+                      fill="var(--chart-1)" 
+                      radius={[8, 8, 0, 0]}
+                      maxBarSize={60}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-border">
+                  <p className="text-sm text-muted-foreground">
+                    {delayDistributionQuery.isLoading ? 'Loading distribution data...' : 'No delay distribution data available'}
+                  </p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
-      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('charts.rankingTitle')}</CardTitle>
-          <CardDescription>{t('charts.rankingDesc')} • Last {timeRange.label}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {lineDelayRanking.map((line) => {
-            const widthPercent = Math.max(10, Math.round((line.avgDelaySeconds / maxLineDelay) * 100))
-            return (
-              <div key={line.line} className="grid grid-cols-[70px_1fr_55px] items-center gap-2 sm:grid-cols-[80px_1fr_70px] sm:gap-3">
-                <p className="text-sm font-medium">
-                  {translateMode(line.mode)} {line.line}
-                </p>
-                <div className="relative h-9 rounded-xl bg-muted/80 p-1">
-                  <div
-                    className="flex h-full items-center justify-end rounded-lg pr-2"
-                    style={{
-                      width: `${widthPercent}%`,
-                      backgroundColor: getLineStyle(line.line).backgroundColor,
-                      color: getLineStyle(line.line).textColor,
-                    }}
-                  >
-                    <span className="rounded-full bg-background/40 p-1">{getModeIcon(line.mode)}</span>
-                  </div>
+        <Card className="rounded-xl border-dashed shadow-md">
+          <CardHeader>
+            <CardTitle className="text-base">System Diagnostics</CardTitle>
+            <CardDescription className="text-xs">Live monitoring metrics for polling and API reliability</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {debugMetricsQuery.data ? (
+              <div className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Monitored Stops</p>
+                  <p className="text-xl font-bold">{debugMetricsQuery.data.monitored_stops_count}</p>
                 </div>
-                <p className="text-right text-sm font-semibold">{line.avgDelaySeconds}s</p>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Poll Requests (5m)</p>
+                  <p className="text-xl font-bold">{debugMetricsQuery.data.poll_requests_count_5m}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Avg Response Time</p>
+                  <p className="text-xl font-bold">{Math.round(debugMetricsQuery.data.average_api_response_time_ms_5m)}ms</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Success Rate (5m)</p>
+                  <p className="text-xl font-bold text-success">{debugMetricsQuery.data.success_rate_percent_5m.toFixed(1)}%</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Poll Cycles (5m)</p>
+                  <p className="text-xl font-bold">{debugMetricsQuery.data.poll_cycles_count_5m}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Successful Polls</p>
+                  <p className="text-xl font-bold text-success">{debugMetricsQuery.data.successful_stop_polls_count_5m}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Failed Polls</p>
+                  <p className="text-xl font-bold text-error">{debugMetricsQuery.data.failed_stop_polls_count_5m}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Window</p>
+                  <p className="text-xl font-bold">{debugMetricsQuery.data.window_minutes}min</p>
+                </div>
               </div>
-            )
-          })}
-          <p className="text-xs text-muted-foreground">
-            {lineColorsQuery.data && lineColorsQuery.data.length > 0 ? t('charts.colorsApi') : t('charts.colorsFallback')}
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('drilldown.title')}</CardTitle>
-          <CardDescription>{t('drilldown.description')} • Last {timeRange.label}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            {filteredLines.map((line) => (
-              <button
-                key={line.line}
-                type="button"
-                className={`chip ${selectedLine === line.line ? 'chip-active' : ''}`}
-                style={{
-                  borderColor: getLineStyle(line.line).borderColor,
-                  backgroundColor: getLineStyle(line.line).backgroundColor,
-                  color: getLineStyle(line.line).textColor,
-                }}
-                onClick={() => setSelectedLine(line.line)}
-              >
-                {translateMode(line.mode)} {line.line}
-              </button>
-            ))}
-          </div>
-
-          {selectedLineStats ? (
-            <div className="grid gap-3 rounded-xl border border-border/80 bg-muted/40 p-4 text-sm md:grid-cols-2">
-              <p>
-                <strong>{t('drilldown.line')}:</strong> {translateMode(selectedLineStats.mode)} {selectedLineStats.line}
-              </p>
-              <p>
-                <strong>{t('drilldown.district')}:</strong> {selectedLineStats.district}
-              </p>
-              <p>
-                <strong>{t('drilldown.avgDelay')}:</strong> {selectedLineStats.avgDelaySeconds}s
-              </p>
-              <p>
-                <strong>{t('drilldown.ontime')}:</strong> {selectedLineStats.onTimeRate}%
-              </p>
-              <p>
-                <strong>{t('drilldown.crowding')}:</strong> {selectedLineStats.crowdingScore}/100
-              </p>
-              <p>
-                <strong>{t('drilldown.cancellations')}:</strong> {selectedLineStats.canceledTrips}
-              </p>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">{t('drilldown.empty')}</p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {t('charts.distributionTitle')}
-            {(selectedLine || worstLinesQuery.data?.[0]?.line_number) && (
-              <span className="ml-2 text-sm font-normal text-muted-foreground">
-                (Line {selectedLine || worstLinesQuery.data?.[0]?.line_number})
-              </span>
-            )}
-          </CardTitle>
-          <CardDescription>{t('charts.distributionDesc')} • Last {timeRange.label}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[300px] w-full sm:h-[320px]">
-            {delayDistributionData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={delayDistributionData} barCategoryGap="20%">
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                  <XAxis 
-                    dataKey="delayRange" 
-                    stroke="var(--muted-foreground)"
-                    style={{ fill: 'var(--muted-foreground)' }}
-                  />
-                  <YAxis 
-                    stroke="var(--muted-foreground)" 
-                    label={{ 
-                      value: 'Departures', 
-                      angle: -90, 
-                      position: 'insideLeft',
-                      style: { fill: 'var(--muted-foreground)' }
-                    }}
-                    style={{ fill: 'var(--muted-foreground)' }}
-                  />
-                  <Tooltip 
-                    contentStyle={{
-                      backgroundColor: 'var(--popover)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '8px',
-                      color: 'var(--popover-foreground)'
-                    }}
-                    labelStyle={{
-                      color: 'var(--foreground)',
-                      fontWeight: 600
-                    }}
-                  />
-                  <Bar dataKey="departures" name="Departures" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
             ) : (
-              <div className="flex h-full items-center justify-center text-muted-foreground">
-                <p>{delayDistributionQuery.isLoading ? 'Loading...' : 'No delay distribution data available'}</p>
+              <div className="flex h-32 items-center justify-center rounded-lg border border-dashed border-border">
+                <p className="text-sm text-muted-foreground">Debug metrics are unavailable</p>
               </div>
             )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Debug monitoring metrics</CardTitle>
-          <CardDescription>Rolling 5-minute live diagnostics for polling and API reliability.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {debugMetricsQuery.data ? (
-            <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-              <p>
-                <strong>Monitored stops:</strong> {debugMetricsQuery.data.monitored_stops_count}
-              </p>
-              <p>
-                <strong>Poll requests (5m):</strong> {debugMetricsQuery.data.poll_requests_count_5m}
-              </p>
-              <p>
-                <strong>Avg API response (5m):</strong> {Math.round(debugMetricsQuery.data.average_api_response_time_ms_5m)} ms
-              </p>
-              <p>
-                <strong>Success rate (5m):</strong> {debugMetricsQuery.data.success_rate_percent_5m.toFixed(1)}%
-              </p>
-              <p>
-                <strong>Poll cycles (5m):</strong> {debugMetricsQuery.data.poll_cycles_count_5m}
-              </p>
-              <p>
-                <strong>Successful stop polls (5m):</strong> {debugMetricsQuery.data.successful_stop_polls_count_5m}
-              </p>
-              <p>
-                <strong>Failed stop polls (5m):</strong> {debugMetricsQuery.data.failed_stop_polls_count_5m}
-              </p>
-              <p>
-                <strong>Window:</strong> {debugMetricsQuery.data.window_minutes} minutes
-              </p>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">Debug metrics are unavailable right now.</p>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </main>
   )
 }
