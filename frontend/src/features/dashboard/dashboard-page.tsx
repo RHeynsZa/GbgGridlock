@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { ArrowUpRight, BusFront, Languages, Moon, Ship, Sun, TramFront, TriangleAlert, Waves } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -45,6 +45,21 @@ const fallbackLineStyles: Record<string, { backgroundColor: string; textColor: s
   X4: { backgroundColor: '#CC79A7', textColor: '#FFFFFF', borderColor: '#CC79A7' },
   '286': { backgroundColor: '#006D77', textColor: '#FFFFFF', borderColor: '#006D77' },
   '287': { backgroundColor: '#264653', textColor: '#FFFFFF', borderColor: '#264653' },
+}
+
+const withAlpha = (color: string, alpha: number): string => {
+  if (color.startsWith('#')) {
+    const r = parseInt(color.slice(1, 3), 16)
+    const g = parseInt(color.slice(3, 5), 16)
+    const b = parseInt(color.slice(5, 7), 16)
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`
+  }
+  return color
+}
+
+const chartLegendWrapperStyle: React.CSSProperties = {
+  paddingTop: '12px',
+  fontSize: '12px',
 }
 
 const chartModeOrder: LineMode[] = ['Tram', 'Bus', 'Ferry']
@@ -397,7 +412,7 @@ export function DashboardPage() {
               <CardContent>
                 <div className="h-[280px] w-full sm:h-[360px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={hourlyTrendQuery.data ?? []} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <AreaChart data={hourlyTrendQuery.data ?? []} margin={{ top: 10, right: 10, left: 0, bottom: 30 }}>
                   <defs>
                     <linearGradient id="tramGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.5} />
@@ -452,6 +467,12 @@ export function DashboardPage() {
                     }}
                     labelFormatter={(value) => formatHourForChart(String(value), true)}
                   />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    height={36} 
+                    wrapperStyle={chartLegendWrapperStyle}
+                    iconType="line"
+                  />
                   <Area type="monotone" dataKey="tram" name={translateMode('Tram')} stroke="var(--chart-1)" fill="url(#tramGradient)" strokeWidth={2.5} />
                   <Area type="monotone" dataKey="bus" name={translateMode('Bus')} stroke="var(--chart-2)" fill="url(#busGradient)" strokeWidth={2.5} />
                   <Area type="monotone" dataKey="ferry" name={translateMode('Ferry')} stroke="var(--chart-3)" fill="url(#ferryGradient)" strokeWidth={2.5} />
@@ -473,6 +494,7 @@ export function DashboardPage() {
               <>
                 {lineDelayRanking.map((line, index) => {
                   const widthPercent = Math.max(10, Math.round((line.avgDelaySeconds / maxLineDelay) * 100))
+                  const lineColor = getLineStyle(line.line).backgroundColor
                   return (
                     <div key={line.line} className="group cursor-pointer" data-testid="ranking-row">
                       <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg p-2 transition-colors hover:bg-muted/50 sm:gap-3">
@@ -487,10 +509,12 @@ export function DashboardPage() {
                         </div>
                         <div className="relative h-8 rounded-lg bg-muted sm:h-10">
                           <div
-                            className="flex h-full items-center justify-end rounded-lg border-l-4 bg-card px-1.5 transition-all duration-300 group-hover:shadow-sm sm:px-2"
+                            className="flex h-full items-center justify-end rounded-lg border-b-2 border-r-2 px-1.5 transition-all duration-300 group-hover:shadow-sm sm:px-2"
                             style={{
                               width: `${widthPercent}%`,
-                              borderLeftColor: getLineStyle(line.line).backgroundColor,
+                              backgroundColor: withAlpha(lineColor, 0.15),
+                              borderBottomColor: lineColor,
+                              borderRightColor: lineColor,
                             }}
                           >
                             <span className="text-[10px] font-bold text-foreground sm:text-xs">{line.avgDelaySeconds}s</span>
@@ -528,27 +552,35 @@ export function DashboardPage() {
                     const lineStyle = getLineStyle(line.line)
                     const isSelected = selectedLine === line.line
                     return (
-                      <AccentedButton
+                      <button
                         key={line.line}
                         type="button"
-                        accentColor={lineStyle.backgroundColor}
-                        variant={isSelected ? 'default' : 'outline'}
-                        size="sm"
                         onClick={() => setSelectedLine(line.line)}
-                        className={isSelected ? 'border-border/50 shadow-md' : ''}
+                        className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
+                          isSelected 
+                            ? 'border-b-2 border-r-2 shadow-md' 
+                            : 'border border-border hover:bg-muted/50'
+                        }`}
+                        style={isSelected ? {
+                          backgroundColor: withAlpha(lineStyle.backgroundColor, 0.15),
+                          borderBottomColor: lineStyle.backgroundColor,
+                          borderRightColor: lineStyle.backgroundColor,
+                        } : {}}
                       >
                         {getModeIcon(line.mode)}
                         <span>{line.line}</span>
-                      </AccentedButton>
+                      </button>
                     )
                   })}
                 </div>
 
                 {selectedLineStats ? (
                   <div 
-                    className="rounded-xl border-l-4 border-border bg-muted/30 p-3 sm:p-5"
+                    className="rounded-xl border-b-2 border-r-2 p-3 sm:p-5"
                     style={{
-                      borderLeftColor: getLineStyle(selectedLineStats.line).backgroundColor,
+                      backgroundColor: withAlpha(getLineStyle(selectedLineStats.line).backgroundColor, 0.1),
+                      borderBottomColor: getLineStyle(selectedLineStats.line).backgroundColor,
+                      borderRightColor: getLineStyle(selectedLineStats.line).backgroundColor,
                     }}
                   >
                     <div className="mb-3 flex items-center gap-2 sm:mb-4">
@@ -613,7 +645,7 @@ export function DashboardPage() {
             <div className="h-[320px] w-full sm:h-[360px]">
               {delayDistributionData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={delayDistributionData} barCategoryGap="20%" margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <BarChart data={delayDistributionData} barCategoryGap="20%" margin={{ top: 10, right: 10, left: 0, bottom: 30 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} strokeOpacity={0.5} />
                     <XAxis 
                       dataKey="delayRange" 
@@ -648,10 +680,18 @@ export function DashboardPage() {
                         marginBottom: '4px'
                       }}
                     />
+                    <Legend 
+                      verticalAlign="bottom" 
+                      height={36} 
+                      wrapperStyle={chartLegendWrapperStyle}
+                      iconType="rect"
+                    />
                     <Bar 
                       dataKey="departures" 
-                      name="Departures" 
-                      fill="var(--chart-1)" 
+                      name={`Departures - Line ${selectedLine || worstLinesQuery.data?.[0]?.line_number || ''}`}
+                      fill={(selectedLine || worstLinesQuery.data?.[0]?.line_number) 
+                        ? getLineStyle(selectedLine || worstLinesQuery.data?.[0]?.line_number || '').backgroundColor 
+                        : 'var(--chart-1)'} 
                       radius={[8, 8, 0, 0]}
                       maxBarSize={60}
                     />
