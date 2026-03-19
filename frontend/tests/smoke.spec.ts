@@ -47,11 +47,11 @@ test.describe('Smoke tests – redesigned dashboard shell', () => {
     await gotoDashboard(page)
 
     await expect(page.getByText('Control panel')).toBeVisible()
-    await expect(page.getByRole('combobox', { name: 'Time Range' })).toBeVisible()
-    await expect(page.getByRole('combobox', { name: 'Stop filter' })).toBeVisible()
+    await expect(page.locator('#time-range-filter')).toBeVisible()
+    await expect(page.locator('#stop-filter')).toBeVisible()
 
     for (const label of ['All', 'Tram', 'Bus']) {
-      await expect(page.getByRole('button', { name: label, exact: true })).toBeVisible()
+      await expect(page.locator('.accented-button').filter({ hasText: label })).toBeVisible()
     }
   })
 })
