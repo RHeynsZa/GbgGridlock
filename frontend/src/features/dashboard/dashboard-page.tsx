@@ -256,57 +256,57 @@ export function DashboardPage() {
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:space-y-8 lg:px-8 lg:py-8">
+      <div className="mx-auto w-full max-w-7xl space-y-4 px-3 py-4 sm:space-y-6 sm:px-6 sm:py-6 lg:space-y-8 lg:px-8 lg:py-8">
 
         <section>
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold text-foreground sm:text-xl">Network Overview</h2>
-            <p className="text-sm text-muted-foreground">Last {timeRange.label}</p>
+          <div className="mb-3 sm:mb-4">
+            <h2 className="text-base font-semibold text-foreground sm:text-lg md:text-xl">Network Overview</h2>
+            <p className="text-xs text-muted-foreground sm:text-sm">Last {timeRange.label}</p>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[
               { 
                 title: t('kpis.networkDelay'), 
                 value: formatKpi(avgDelay, 's'), 
-                icon: <TriangleAlert className="h-5 w-5" />, 
+                icon: <TriangleAlert className="h-4 w-4 sm:h-5 sm:w-5" />, 
                 note: t('kpis.networkDelayDesc'),
                 color: 'text-warning'
               },
               { 
                 title: t('kpis.p95Delay'), 
                 value: formatKpi(p95Delay, 's'), 
-                icon: <Waves className="h-5 w-5" />, 
+                icon: <Waves className="h-4 w-4 sm:h-5 sm:w-5" />, 
                 note: t('kpis.p95DelayDesc'),
                 color: 'text-error'
               },
               { 
                 title: t('kpis.reliability'), 
                 value: formatKpi(reliability, '%'), 
-                icon: <ArrowUpRight className="h-5 w-5" />, 
+                icon: <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5" />, 
                 note: t('kpis.reliabilityDesc'),
                 color: 'text-success'
               },
               {
                 title: t('kpis.cancellationRate'),
                 value: formatKpi(cancellationRate, '%'),
-                icon: <BusFront className="h-5 w-5" />,
+                icon: <BusFront className="h-4 w-4 sm:h-5 sm:w-5" />,
                 note: t('kpis.cancellationRateDesc'),
                 color: 'text-primary'
               },
             ].map((kpi) => (
               <Card key={kpi.title} className="kpi-card rounded-xl">
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-2 sm:pb-3">
                   <div className="flex items-start justify-between">
-                    <CardDescription className="text-xs font-medium uppercase tracking-wider">
+                    <CardDescription className="text-[10px] font-medium uppercase tracking-wider sm:text-xs">
                       {kpi.title}
                     </CardDescription>
-                    <div className={`rounded-lg bg-muted p-2 ${kpi.color}`}>
+                    <div className={`rounded-lg bg-muted p-1.5 sm:p-2 ${kpi.color}`}>
                       {kpi.icon}
                     </div>
                   </div>
-                  <CardTitle className="mt-2 text-3xl font-bold md:text-4xl">{kpi.value}</CardTitle>
+                  <CardTitle className="mt-1 text-2xl font-bold sm:mt-2 sm:text-3xl md:text-4xl">{kpi.value}</CardTitle>
                 </CardHeader>
-                <CardContent className="text-xs text-muted-foreground">
+                <CardContent className="pt-0 text-[10px] text-muted-foreground sm:text-xs">
                   {kpi.note}
                 </CardContent>
               </Card>
@@ -314,16 +314,16 @@ export function DashboardPage() {
           </div>
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-12">
+        <section className="grid gap-4 sm:gap-6 lg:grid-cols-12">
           <div className="lg:col-span-3">
             <Card className="rounded-xl shadow-md">
-              <CardHeader>
-                <CardTitle className="text-base">{t('filters.title')}</CardTitle>
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="text-sm sm:text-base">{t('filters.title')}</CardTitle>
                 <CardDescription className="text-xs">{t('filters.description')}</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-5">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground" htmlFor="time-range-filter">
+              <CardContent className="space-y-3 sm:space-y-5">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <label className="text-xs font-medium text-foreground sm:text-sm" htmlFor="time-range-filter">
                     Time Range
                   </label>
                   <select 
@@ -343,8 +343,8 @@ export function DashboardPage() {
                   </select>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground" htmlFor="stop-filter">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <label className="text-xs font-medium text-foreground sm:text-sm" htmlFor="stop-filter">
                     {t('filters.stop')}
                   </label>
                   <select id="stop-filter" className="input-select" value={selectedStop} onChange={(event) => setSelectedStop(event.target.value)}>
@@ -357,9 +357,9 @@ export function DashboardPage() {
                   </select>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Transport Mode</label>
-                  <div className="flex flex-col gap-2">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <label className="text-xs font-medium text-foreground sm:text-sm">Transport Mode</label>
+                  <div className="flex flex-col gap-1.5 sm:gap-2">
                     {(['All', 'Tram', 'Bus'] as const).map((mode) => (
                       <button
                         key={mode}
@@ -382,8 +382,8 @@ export function DashboardPage() {
 
           <div className="lg:col-span-9">
             <Card className="rounded-xl shadow-md">
-              <CardHeader>
-                <CardTitle className="text-base">{t('charts.timelineTitle')}</CardTitle>
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="text-sm sm:text-base">{t('charts.timelineTitle')}</CardTitle>
                 <CardDescription className="text-xs">{t('charts.timelineDesc')}</CardDescription>
               </CardHeader>
               <CardContent>
@@ -461,46 +461,45 @@ export function DashboardPage() {
         </section>
 
         <Card className="rounded-xl shadow-md">
-          <CardHeader>
-            <CardTitle className="text-base">{t('charts.rankingTitle')}</CardTitle>
+          <CardHeader className="pb-3 sm:pb-6">
+            <CardTitle className="text-sm sm:text-base">{t('charts.rankingTitle')}</CardTitle>
             <CardDescription className="text-xs">{t('charts.rankingDesc')}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2 sm:space-y-3">
             {lineDelayRanking.length > 0 ? (
               <>
                 {lineDelayRanking.map((line, index) => {
                   const widthPercent = Math.max(10, Math.round((line.avgDelaySeconds / maxLineDelay) * 100))
                   return (
                     <div key={line.line} className="group cursor-pointer">
-                      <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-lg p-2 transition-colors hover:bg-muted/50">
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-muted text-xs font-bold text-muted-foreground">
+                      <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg p-2 transition-colors hover:bg-muted/50 sm:gap-3">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <span className="flex h-5 w-5 items-center justify-center rounded-md bg-muted text-[10px] font-bold text-muted-foreground sm:h-6 sm:w-6 sm:text-xs">
                             {index + 1}
                           </span>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1 sm:gap-1.5">
                             {getModeIcon(line.mode)}
-                            <p className="text-sm font-semibold">{line.line}</p>
+                            <p className="text-xs font-semibold sm:text-sm">{line.line}</p>
                           </div>
                         </div>
-                        <div className="relative h-10 rounded-lg bg-muted">
+                        <div className="relative h-8 rounded-lg bg-muted sm:h-10">
                           <div
-                            className="flex h-full items-center justify-end rounded-lg px-2 transition-all duration-300 group-hover:opacity-90"
+                            className="flex h-full items-center justify-end rounded-lg border-l-4 bg-card px-1.5 transition-all duration-300 group-hover:shadow-sm sm:px-2"
                             style={{
                               width: `${widthPercent}%`,
-                              backgroundColor: getLineStyle(line.line).backgroundColor,
-                              color: getLineStyle(line.line).textColor,
+                              borderLeftColor: getLineStyle(line.line).backgroundColor,
                             }}
                           >
-                            <span className="text-xs font-bold">{line.avgDelaySeconds}s</span>
+                            <span className="text-[10px] font-bold text-foreground sm:text-xs">{line.avgDelaySeconds}s</span>
                           </div>
                         </div>
-                        <p className="text-right text-sm font-bold tabular-nums">{line.avgDelaySeconds}s</p>
+                        <p className="text-right text-xs font-bold tabular-nums sm:text-sm">{line.avgDelaySeconds}s</p>
                       </div>
                     </div>
                   )
                 })}
-                <div className="mt-4 rounded-lg bg-muted/30 p-3">
-                  <p className="text-xs text-muted-foreground">
+                <div className="mt-3 rounded-lg bg-muted/30 p-2 sm:mt-4 sm:p-3">
+                  <p className="text-[10px] text-muted-foreground sm:text-xs">
                     {lineColorsQuery.data && lineColorsQuery.data.length > 0 ? t('charts.colorsApi') : t('charts.colorsFallback')}
                   </p>
                 </div>
@@ -514,11 +513,11 @@ export function DashboardPage() {
         </Card>
 
         <Card className="rounded-xl shadow-md">
-          <CardHeader>
-            <CardTitle className="text-base">{t('drilldown.title')}</CardTitle>
+          <CardHeader className="pb-3 sm:pb-6">
+            <CardTitle className="text-sm sm:text-base">{t('drilldown.title')}</CardTitle>
             <CardDescription className="text-xs">{t('drilldown.description')}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-5">
+          <CardContent className="space-y-3 sm:space-y-5">
             {filteredLines.length > 0 ? (
               <>
                 <div className="flex flex-wrap gap-2">
@@ -526,13 +525,11 @@ export function DashboardPage() {
                     <button
                       key={line.line}
                       type="button"
-                      className={`chip flex items-center gap-1.5 ${selectedLine === line.line ? 'chip-active' : ''}`}
+                      className={`chip flex items-center gap-1.5 ${selectedLine === line.line ? 'border-l-4' : ''}`}
                       style={
                         selectedLine === line.line
                           ? {
-                              borderColor: getLineStyle(line.line).borderColor,
-                              backgroundColor: getLineStyle(line.line).backgroundColor,
-                              color: getLineStyle(line.line).textColor,
+                              borderLeftColor: getLineStyle(line.line).backgroundColor,
                             }
                           : {}
                       }
@@ -545,41 +542,44 @@ export function DashboardPage() {
                 </div>
 
                 {selectedLineStats ? (
-                  <div className="rounded-xl border border-border bg-muted/30 p-5">
-                    <div className="mb-4 flex items-center gap-2">
-                      <div 
-                        className="flex h-10 w-10 items-center justify-center rounded-lg font-bold"
+                  <div 
+                    className="rounded-xl border-l-4 border-border bg-muted/30 p-3 sm:p-5"
+                    style={{
+                      borderLeftColor: getLineStyle(selectedLineStats.line).backgroundColor,
+                    }}
+                  >
+                    <div className="mb-3 flex items-center gap-2 sm:mb-4">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg border-2 bg-card text-sm font-bold text-foreground sm:h-10 sm:w-10"
                         style={{
-                          backgroundColor: getLineStyle(selectedLineStats.line).backgroundColor,
-                          color: getLineStyle(selectedLineStats.line).textColor,
+                          borderColor: getLineStyle(selectedLineStats.line).backgroundColor,
                         }}
                       >
                         {selectedLineStats.line}
                       </div>
                       <div>
-                        <p className="text-sm font-semibold">{translateMode(selectedLineStats.mode)} Line {selectedLineStats.line}</p>
-                        <p className="text-xs text-muted-foreground">Detailed statistics</p>
+                        <p className="text-xs font-semibold sm:text-sm">{translateMode(selectedLineStats.mode)} Line {selectedLineStats.line}</p>
+                        <p className="text-[10px] text-muted-foreground sm:text-xs">Detailed statistics</p>
                       </div>
                     </div>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('drilldown.avgDelay')}</p>
-                        <p className="text-2xl font-bold">{selectedLineStats.avgDelaySeconds}s</p>
+                    <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+                      <div className="space-y-0.5 sm:space-y-1">
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground sm:text-xs">{t('drilldown.avgDelay')}</p>
+                        <p className="text-xl font-bold sm:text-2xl">{selectedLineStats.avgDelaySeconds}s</p>
                       </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('drilldown.ontime')}</p>
-                        <p className="text-2xl font-bold text-success">{selectedLineStats.onTimeRate}%</p>
+                      <div className="space-y-0.5 sm:space-y-1">
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground sm:text-xs">{t('drilldown.ontime')}</p>
+                        <p className="text-xl font-bold text-success sm:text-2xl">{selectedLineStats.onTimeRate}%</p>
                       </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('drilldown.cancellations')}</p>
-                        <p className="text-2xl font-bold text-error">{selectedLineStats.canceledTrips}</p>
+                      <div className="space-y-0.5 sm:space-y-1">
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground sm:text-xs">{t('drilldown.cancellations')}</p>
+                        <p className="text-xl font-bold text-error sm:text-2xl">{selectedLineStats.canceledTrips}</p>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex h-24 items-center justify-center rounded-lg border border-dashed border-border">
-                    <p className="text-sm text-muted-foreground">{t('drilldown.empty')}</p>
-                  </div>
+              <div className="flex h-20 items-center justify-center rounded-lg border border-dashed border-border sm:h-24">
+                <p className="text-xs text-muted-foreground sm:text-sm">{t('drilldown.empty')}</p>
+              </div>
                 )}
               </>
             ) : (
@@ -591,10 +591,10 @@ export function DashboardPage() {
         </Card>
 
         <Card className="rounded-xl shadow-md">
-          <CardHeader>
+          <CardHeader className="pb-3 sm:pb-6">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <CardTitle className="text-base">
+                <CardTitle className="text-sm sm:text-base">
                   {t('charts.distributionTitle')}
                   {(selectedLine || worstLinesQuery.data?.[0]?.line_number) && (
                     <span className="ml-2 text-sm font-normal text-muted-foreground">
@@ -666,8 +666,8 @@ export function DashboardPage() {
         </Card>
 
         <Card className="rounded-xl border-dashed shadow-md">
-          <CardHeader>
-            <CardTitle className="text-base">System Diagnostics</CardTitle>
+          <CardHeader className="pb-3 sm:pb-6">
+            <CardTitle className="text-sm sm:text-base">System Diagnostics</CardTitle>
             <CardDescription className="text-xs">Live monitoring metrics for polling and API reliability</CardDescription>
           </CardHeader>
           <CardContent>
