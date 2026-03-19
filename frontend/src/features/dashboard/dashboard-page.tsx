@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { ArrowUpRight, BusFront, Languages, Moon, Ship, Sun, TramFront, TriangleAlert, Waves } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { DateTime } from 'luxon'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AccentedButton } from '@/components/ui/accented-button'
@@ -436,7 +437,13 @@ export function DashboardPage() {
                     axisLine={{ stroke: 'var(--border)' }}
                     tickFormatter={(value) => {
                       const hourlyData = hourlyTrendQuery.data ?? []
-                      const uniqueDates = new Set(hourlyData.map((d) => new Date(d.hour).toISOString().split('T')[0]))
+                      const uniqueDates = new Set(
+                        hourlyData.map((d) => 
+                          DateTime.fromISO(d.hour, { zone: 'utc' })
+                            .setZone('Europe/Stockholm')
+                            .toFormat('yyyy-MM-dd')
+                        )
+                      )
                       return formatHourForChart(value, uniqueDates.size > 1)
                     }}
                   />

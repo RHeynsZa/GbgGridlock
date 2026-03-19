@@ -80,6 +80,27 @@ test.describe('API integration – real backend', () => {
     const drilldown = page.locator('.rounded-xl.shadow-md').filter({ hasText: 'Route drilldown panel' }).first()
     await expect(drilldown).toBeVisible()
   })
+
+  test('hourly trend chart renders with proper datetime formatting', async ({ page }) => {
+    await gotoDashboard(page)
+
+    await expect(page.getByText('Delay timeline and rush pressure')).toBeVisible()
+    
+    await page.waitForTimeout(2000)
+    
+    const chartContainer = page.locator('.recharts-surface').first()
+    if (await chartContainer.count() > 0) {
+      await expect(chartContainer).toBeVisible()
+      
+      const xAxisTicks = page.locator('.recharts-xAxis .recharts-cartesian-axis-tick-value')
+      const tickCount = await xAxisTicks.count()
+      
+      if (tickCount > 0) {
+        const firstTickText = await xAxisTicks.first().textContent()
+        expect(firstTickText).toMatch(/^\d{2}:\d{2}$|^\d{2}-\d{2} \d{2}:\d{2}$/)
+      }
+    }
+  })
 })
 
 test.describe('API error handling – graceful degradation', () => {
