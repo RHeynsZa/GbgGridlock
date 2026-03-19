@@ -1,50 +1,57 @@
 import { expect, test } from '@playwright/test'
 
-test.describe('Smoke tests – app loads without crashes', () => {
-  test('renders the dashboard heading and main sections', async ({ page }) => {
+const APP_HEADING = /GbgGridlock/i
+
+async function gotoDashboard(page: Parameters<typeof test>[0]['page']) {
+  await page.goto('/')
+  await page.waitForLoadState('domcontentloaded')
+}
+
+test.describe('Smoke tests – redesigned dashboard shell', () => {
+  test('renders the dashboard heading and primary sections without page errors', async ({ page }) => {
     const jsErrors: string[] = []
     page.on('pageerror', (err) => jsErrors.push(err.message))
 
-    await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
+    await gotoDashboard(page)
 
-    await expect(page.getByRole('heading', { level: 1, name: 'GbgGridlock' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: APP_HEADING })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 2, name: 'Network Overview' })).toBeVisible()
+    await expect(page.getByText('Delay ranking')).toBeVisible()
+    await expect(page.getByText('System Diagnostics')).toBeVisible()
 
     expect(jsErrors).toEqual([])
   })
 
-  test('no "Cannot access before initialization" errors in production build', async ({ page }) => {
+  test('does not emit initialization errors after the redesigned shell loads', async ({ page }) => {
     const jsErrors: string[] = []
     page.on('pageerror', (err) => jsErrors.push(err.message))
 
-    await page.goto('/')
+    await gotoDashboard(page)
     await page.waitForLoadState('networkidle')
 
     const initErrors = jsErrors.filter((msg) => msg.includes('before initialization'))
     expect(initErrors).toEqual([])
   })
 
-  test('KPI cards section renders four cards', async ({ page }) => {
-    await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
+  test('renders the four KPI cards in the network overview', async ({ page }) => {
+    await gotoDashboard(page)
 
-    const kpiCards = page.locator('[class*="kpi-card"]')
-    await expect(kpiCards).toHaveCount(4)
+    await expect(page.locator('.kpi-card')).toHaveCount(4)
+    await expect(page.getByText('Network delay')).toBeVisible()
+    await expect(page.getByText('P95 delay tail')).toBeVisible()
+    await expect(page.getByText('Reliability score')).toBeVisible()
+    await expect(page.getByText('Cancellation rate')).toBeVisible()
   })
 
-  test('mode filter buttons are present', async ({ page }) => {
-    await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
+  test('shows the redesigned control panel filters', async ({ page }) => {
+    await gotoDashboard(page)
+
+    await expect(page.getByText('Control panel')).toBeVisible()
+    await expect(page.getByRole('combobox', { name: 'Time Range' })).toBeVisible()
+    await expect(page.getByRole('combobox', { name: 'Stop filter' })).toBeVisible()
 
     for (const label of ['All', 'Tram', 'Bus']) {
       await expect(page.getByRole('button', { name: label, exact: true })).toBeVisible()
     }
-  })
-
-  test('stop filter dropdown is present', async ({ page }) => {
-    await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
-
-    await expect(page.locator('#stop-filter')).toBeVisible()
   })
 })
