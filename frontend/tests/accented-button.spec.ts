@@ -76,8 +76,9 @@ test.describe('AccentedButton Component', () => {
 
   test('should integrate with dashboard transport mode filters', async ({ page }) => {
     await page.goto('/')
+    await page.waitForLoadState('domcontentloaded')
 
-    const transportModeButtons = page.getByRole('button', { name: /Tram|Bus|Ferry/i })
+    const transportModeButtons = page.locator('.accented-button').filter({ hasText: /All|Tram|Bus/i })
     const firstModeButton = transportModeButtons.first()
 
     await expect(firstModeButton).toBeVisible()
