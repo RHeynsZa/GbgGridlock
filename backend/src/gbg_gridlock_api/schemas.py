@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel
 
 
@@ -54,7 +55,7 @@ class NetworkStats(BaseModel):
 
 
 class HourlyTrendPoint(BaseModel):
-    hour: str
+    hour: datetime
     tram: float
     bus: float
     ferry: float

@@ -251,10 +251,12 @@ async def test_network_stats_endpoint_returns_aggregated_metrics(monkeypatch):
 
 @pytest.mark.anyio
 async def test_hourly_trend_endpoint_returns_time_series_by_mode(monkeypatch):
+    from datetime import datetime, timezone
+    
     conn = FakeConn(
         rows=[
-            {"hour": "2026-03-14 08:00", "tram": 45.2, "bus": 62.1, "ferry": 12.0},
-            {"hour": "2026-03-14 09:00", "tram": 78.5, "bus": 91.3, "ferry": 8.5},
+            {"hour": datetime(2026, 3, 14, 8, 0, tzinfo=timezone.utc), "tram": 45.2, "bus": 62.1, "ferry": 12.0},
+            {"hour": datetime(2026, 3, 14, 9, 0, tzinfo=timezone.utc), "tram": 78.5, "bus": 91.3, "ferry": 8.5},
         ]
     )
     monkeypatch.setattr(main.db, "_pool", FakePool(conn))
@@ -264,8 +266,8 @@ async def test_hourly_trend_endpoint_returns_time_series_by_mode(monkeypatch):
 
     assert response.status_code == 200
     assert response.json() == [
-        {"hour": "2026-03-14 08:00", "tram": 45.2, "bus": 62.1, "ferry": 12.0},
-        {"hour": "2026-03-14 09:00", "tram": 78.5, "bus": 91.3, "ferry": 8.5},
+        {"hour": "2026-03-14T08:00:00Z", "tram": 45.2, "bus": 62.1, "ferry": 12.0},
+        {"hour": "2026-03-14T09:00:00Z", "tram": 78.5, "bus": 91.3, "ferry": 8.5},
     ]
     assert len(conn.calls) == 1
     _, args = conn.calls[0]
