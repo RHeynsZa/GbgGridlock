@@ -1,5 +1,6 @@
-from datetime import datetime
-from pydantic import BaseModel
+from datetime import datetime, timezone
+from typing import Any
+from pydantic import BaseModel, field_serializer, ConfigDict
 
 
 class WorstLine(BaseModel):
@@ -59,6 +60,13 @@ class HourlyTrendPoint(BaseModel):
     tram: float
     bus: float
     ferry: float
+    
+    @field_serializer('hour')
+    def serialize_hour(self, dt: datetime, _info: Any) -> str:
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        iso_string = dt.isoformat()
+        return iso_string.replace('+00:00', 'Z')
 
 
 class LineDetail(BaseModel):
