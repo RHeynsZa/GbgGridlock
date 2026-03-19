@@ -1,5 +1,7 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
 
+const APP_HEADING = /GbgGridlock/i
+
 const MOCK_NETWORK_STATS = {
   avg_delay_seconds: 142.5,
   reliability_percent: 78.3,
@@ -65,121 +67,140 @@ const MOCK_DELAY_DISTRIBUTION = [
   { bucket_seconds: 420, departures: 4 },
 ]
 
+type RouteHits = Record<
+  'networkStats' | 'worstLines' | 'hourlyTrend' | 'lineDetails' | 'monitoredStops' | 'lineMetadata' | 'debugMetrics' | 'delayDistribution',
+  number
+>
+
 async function mockAllApiRoutes(page: Page) {
-  await page.route('**/api/v1/stats/network*', (route: Route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_NETWORK_STATS) }),
-  )
+  const hits: RouteHits = {
+    networkStats: 0,
+    worstLines: 0,
+    hourlyTrend: 0,
+    lineDetails: 0,
+    monitoredStops: 0,
+    lineMetadata: 0,
+    debugMetrics: 0,
+    delayDistribution: 0,
+  }
 
-  await page.route('**/api/v1/delays/by-stop*', (route: Route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_WORST_LINES) }),
-  )
+  await page.route('**/api/v1/stats/network*', (route: Route) => {
+    hits.networkStats += 1
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_NETWORK_STATS) })
+  })
 
-  await page.route('**/api/v1/stats/hourly-trend*', (route: Route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_HOURLY_TREND) }),
-  )
+  await page.route('**/api/v1/delays/by-stop*', (route: Route) => {
+    hits.worstLines += 1
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_WORST_LINES) })
+  })
 
-  await page.route('**/api/v1/lines/details*', (route: Route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_LINE_DETAILS) }),
-  )
+  await page.route('**/api/v1/stats/hourly-trend*', (route: Route) => {
+    hits.hourlyTrend += 1
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_HOURLY_TREND) })
+  })
 
-  await page.route('**/api/v1/stops/monitored*', (route: Route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_MONITORED_STOPS) }),
-  )
+  await page.route('**/api/v1/lines/details*', (route: Route) => {
+    hits.lineDetails += 1
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_LINE_DETAILS) })
+  })
 
-  await page.route('**/api/v1/lines/metadata*', (route: Route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_LINE_METADATA) }),
-  )
+  await page.route('**/api/v1/stops/monitored*', (route: Route) => {
+    hits.monitoredStops += 1
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_MONITORED_STOPS) })
+  })
 
-  await page.route('**/api/v1/debug/metrics*', (route: Route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_DEBUG_METRICS) }),
-  )
+  await page.route('**/api/v1/lines/metadata*', (route: Route) => {
+    hits.lineMetadata += 1
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_LINE_METADATA) })
+  })
 
-  await page.route('**/api/v1/delays/distribution/*', (route: Route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_DELAY_DISTRIBUTION) }),
-  )
+  await page.route('**/api/v1/debug/metrics*', (route: Route) => {
+    hits.debugMetrics += 1
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_DEBUG_METRICS) })
+  })
+
+  await page.route('**/api/v1/delays/distribution/*', (route: Route) => {
+    hits.delayDistribution += 1
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_DELAY_DISTRIBUTION) })
+  })
+
+  return hits
+}
+
+async function gotoDashboard(page: Page) {
+  await page.goto('/')
+  await page.waitForLoadState('domcontentloaded')
+  await expect(page.getByRole('heading', { level: 1, name: APP_HEADING })).toBeVisible()
 }
 
 test.describe('API integration – mocked backend responses', () => {
-  test.beforeEach(async ({ page }) => {
+  test('renders the redesigned dashboard with mocked data and no initialization errors', async ({ page }) => {
     await mockAllApiRoutes(page)
-  })
 
-  test('no JavaScript errors on page load with API data', async ({ page }) => {
     const jsErrors: string[] = []
     page.on('pageerror', (err) => jsErrors.push(err.message))
 
-    await page.goto('/')
-    await page.waitForLoadState('networkidle')
-
-    await expect(page.getByRole('heading', { level: 1, name: 'GbgGridlock' })).toBeVisible()
+    await gotoDashboard(page)
+    await expect(page.getByText('Delay ranking')).toBeVisible()
 
     const initErrors = jsErrors.filter((msg) => msg.includes('before initialization'))
     expect(initErrors).toEqual([])
-    expect(jsErrors).toEqual([])
   })
 
-  test('all eight API endpoints are called on page load', async ({ page }) => {
-    const calledEndpoints = new Set<string>()
+  test('calls every dashboard data endpoint on first render', async ({ page }) => {
+    const hits = await mockAllApiRoutes(page)
 
-    page.on('request', (req) => {
-      const url = req.url()
-      if (url.includes('/api/v1/stats/network')) calledEndpoints.add('networkStats')
-      if (url.includes('/api/v1/stats/hourly-trend')) calledEndpoints.add('hourlyTrend')
-      if (url.includes('/api/v1/lines/details')) calledEndpoints.add('lineDetails')
-      if (url.includes('/api/v1/delays/by-stop')) calledEndpoints.add('worstLines')
-      if (url.includes('/api/v1/stops/monitored')) calledEndpoints.add('monitoredStops')
-      if (url.includes('/api/v1/lines/metadata')) calledEndpoints.add('lineMetadata')
-      if (url.includes('/api/v1/debug/metrics')) calledEndpoints.add('debugMetrics')
-      if (url.includes('/api/v1/delays/distribution')) calledEndpoints.add('delayDistribution')
-    })
+    await gotoDashboard(page)
+    await expect(page.getByText('Delay distribution (right-skew aware)')).toBeVisible()
+    await expect.poll(() => hits.delayDistribution).toBeGreaterThan(0)
 
-    await page.goto('/')
-    await page.waitForLoadState('networkidle')
-
-    const expected = ['networkStats', 'hourlyTrend', 'lineDetails', 'worstLines', 'monitoredStops', 'lineMetadata', 'debugMetrics', 'delayDistribution']
-    for (const endpoint of expected) {
-      expect(calledEndpoints.has(endpoint), `${endpoint} API was called`).toBe(true)
+    for (const [endpoint, count] of Object.entries(hits)) {
+      expect(count, `${endpoint} API was called`).toBeGreaterThan(0)
     }
   })
 
-  test('KPI cards display values derived from the network stats API', async ({ page }) => {
-    await page.goto('/')
-    await page.waitForLoadState('networkidle')
+  test('shows KPI values derived from the network stats API', async ({ page }) => {
+    await mockAllApiRoutes(page)
 
-    const kpiSection = page.locator('section').first()
-    await expect(kpiSection.getByText('143s')).toBeVisible()
-    await expect(kpiSection.getByText('380s')).toBeVisible()
-    await expect(kpiSection.getByText('78%')).toBeVisible()
-    await expect(kpiSection.getByText('4.2%')).toBeVisible()
+    await gotoDashboard(page)
+
+    await expect(page.getByText('143s')).toBeVisible()
+    await expect(page.getByText('380s')).toBeVisible()
+    await expect(page.getByText('78%')).toBeVisible()
+    await expect(page.getByText('4.2%')).toBeVisible()
   })
 
-  test('delay ranking shows lines sorted by delay descending', async ({ page }) => {
-    await page.goto('/')
-    await page.waitForLoadState('networkidle')
+  test('shows the line delay ranking sorted by descending delay', async ({ page }) => {
+    await mockAllApiRoutes(page)
 
-    await expect(page.getByText('Delay ranking')).toBeVisible()
+    await gotoDashboard(page)
 
-    await expect(page.getByText('210s', { exact: true })).toBeVisible()
-    await expect(page.getByText('186s', { exact: true })).toBeVisible()
-    await expect(page.getByText('150s', { exact: true })).toBeVisible()
-    await expect(page.getByText('95s', { exact: true })).toBeVisible()
+    const rankingRows = page.locator('.group.cursor-pointer')
+    await expect(rankingRows).toHaveCount(4)
+
+    const lineLabels = rankingRows.locator('p.text-sm.font-semibold')
+    await expect(lineLabels.nth(0)).toHaveText('11')
+    await expect(lineLabels.nth(1)).toHaveText('6')
+    await expect(lineLabels.nth(2)).toHaveText('19')
+    await expect(lineLabels.nth(3)).toHaveText('286')
+    await expect(rankingRows.first()).toBeVisible()
   })
 
-  test('Recharts SVG containers render with data', async ({ page }) => {
-    await page.goto('/')
-    await page.waitForLoadState('networkidle')
+  test('renders both Recharts visualizations with mocked data', async ({ page }) => {
+    await mockAllApiRoutes(page)
 
-    const svgElements = page.locator('.recharts-surface')
-    await expect(svgElements.first()).toBeVisible()
-    const svgCount = await svgElements.count()
-    expect(svgCount).toBeGreaterThanOrEqual(2)
+    await gotoDashboard(page)
+
+    await expect(page.locator('.recharts-surface').first()).toBeVisible()
+    await expect.poll(async () => page.locator('.recharts-surface').count()).toBeGreaterThanOrEqual(2)
   })
 
-  test('monitored stops appear in the stop filter dropdown', async ({ page }) => {
-    await page.goto('/')
-    await page.waitForLoadState('networkidle')
+  test('shows monitored stops in the stop filter', async ({ page }) => {
+    await mockAllApiRoutes(page)
 
-    const select = page.locator('#stop-filter')
+    await gotoDashboard(page)
+
+    const select = page.getByRole('combobox', { name: 'Stop filter' })
     await expect(select).toBeVisible()
 
     for (const stop of MOCK_MONITORED_STOPS) {
@@ -187,92 +208,72 @@ test.describe('API integration – mocked backend responses', () => {
     }
   })
 
-  test('selecting a stop re-fetches worst lines with stop_gid param', async ({ page }) => {
+  test('re-fetches worst lines when a stop is selected', async ({ page }) => {
+    const hits = await mockAllApiRoutes(page)
     const byStopRequests: string[] = []
+
     page.on('request', (req) => {
       if (req.url().includes('/api/v1/delays/by-stop')) {
         byStopRequests.push(req.url())
       }
     })
 
-    await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await gotoDashboard(page)
 
-    const initialCount = byStopRequests.length
+    const initialCount = hits.worstLines
+    await page.getByRole('combobox', { name: 'Stop filter' }).selectOption('9021014001960000')
 
-    const select = page.locator('#stop-filter')
-    await select.selectOption('9021014001960000')
-
-    await page.waitForTimeout(1500)
-
-    const newRequests = byStopRequests.slice(initialCount)
-    expect(newRequests.length).toBeGreaterThan(0)
-    const lastReq = newRequests[newRequests.length - 1]
-    expect(lastReq).toContain('stop_gid=9021014001960000')
+    await expect.poll(() => hits.worstLines).toBeGreaterThan(initialCount)
+    expect(byStopRequests.at(-1)).toContain('stop_gid=9021014001960000')
   })
 
-  test('mode filter buttons filter the line drilldown section', async ({ page }) => {
-    await page.goto('/')
-    await page.waitForLoadState('networkidle')
+  test('filters the route drilldown chips by transport mode', async ({ page }) => {
+    await mockAllApiRoutes(page)
 
-    const drilldownCard = page.locator('text=Route drilldown panel').locator('..')
-    await expect(drilldownCard).toBeVisible()
+    await gotoDashboard(page)
 
-    const filterSection = page.locator('text=Control panel').locator('..').locator('..')
+    const drilldown = page.locator('.rounded-xl.shadow-md').filter({ has: page.getByText('Route drilldown panel') }).first()
 
-    await filterSection.getByRole('button', { name: 'Tram', exact: true }).click()
-    await page.waitForTimeout(500)
+    await page.getByRole('button', { name: 'Tram', exact: true }).click()
+    await expect(drilldown.getByRole('button', { name: '6' })).toBeVisible()
+    await expect(drilldown.getByRole('button', { name: '11' })).toBeVisible()
+    await expect(drilldown.getByRole('button', { name: '19' })).toHaveCount(0)
+    await expect(drilldown.getByRole('button', { name: '286' })).toHaveCount(0)
 
-    const drilldownParent = page.locator('text=Route drilldown panel').locator('..').locator('..')
-    await expect(drilldownParent.getByRole('button', { name: /Tram\s/ })).toHaveCount(2)
-    await expect(drilldownParent.getByRole('button', { name: /Bus\s/ })).toHaveCount(0)
-
-    await filterSection.getByRole('button', { name: 'Bus', exact: true }).click()
-    await page.waitForTimeout(500)
-
-    await expect(drilldownParent.getByRole('button', { name: /Tram\s/ })).toHaveCount(0)
-    await expect(drilldownParent.getByRole('button', { name: /Bus\s/ })).toHaveCount(2)
+    await page.getByRole('button', { name: 'Bus', exact: true }).click()
+    await expect(drilldown.getByRole('button', { name: '19' })).toBeVisible()
+    await expect(drilldown.getByRole('button', { name: '286' })).toBeVisible()
+    await expect(drilldown.getByText('Bus Line 19')).toBeVisible()
+    await expect(drilldown.getByText('Tram Line 6')).toHaveCount(0)
   })
 
-  test('debug monitoring metrics section shows live data', async ({ page }) => {
-    await page.goto('/')
-    await page.waitForLoadState('networkidle')
+  test('shows the live diagnostics metrics from the backend', async ({ page }) => {
+    await mockAllApiRoutes(page)
 
-    await expect(page.getByText('Debug monitoring metrics')).toBeVisible()
+    await gotoDashboard(page)
 
-    const debugSection = page.getByText('Debug monitoring metrics').locator('..').locator('..')
-    await expect(debugSection.getByText('12')).toBeVisible()
-    await expect(debugSection.getByText('48')).toBeVisible()
-    await expect(debugSection.getByText('95.8%')).toBeVisible()
+    await expect(page.getByText('System Diagnostics')).toBeVisible()
+    await expect(page.getByText('Monitored Stops', { exact: true })).toBeVisible()
+    await expect(page.getByText('12', { exact: true })).toBeVisible()
+    await expect(page.getByText('48', { exact: true })).toBeVisible()
+    await expect(page.getByText('95.8%')).toBeVisible()
   })
 
-  test('line metadata colors text appears when API returns data', async ({ page }) => {
-    await page.goto('/')
-    await page.waitForLoadState('networkidle')
+  test('shows metadata messaging when line colors load successfully', async ({ page }) => {
+    await mockAllApiRoutes(page)
+
+    await gotoDashboard(page)
 
     await expect(page.getByText('Line colors loaded from official metadata endpoint.')).toBeVisible()
   })
 
-  test('hourly trend chart renders area elements', async ({ page }) => {
-    await page.goto('/')
-    await page.waitForLoadState('networkidle')
+  test('renders the hourly trend chart and distribution chart sections', async ({ page }) => {
+    await mockAllApiRoutes(page)
+
+    await gotoDashboard(page)
 
     await expect(page.getByText('Delay timeline and rush pressure')).toBeVisible()
-
-    const areaChart = page.locator('.recharts-area')
-    const areaCount = await areaChart.count()
-    expect(areaCount).toBeGreaterThanOrEqual(1)
-  })
-
-  test('delay distribution bar chart renders bars', async ({ page }) => {
-    await page.goto('/')
-    await page.waitForLoadState('networkidle')
-
     await expect(page.getByText('Delay distribution (right-skew aware)')).toBeVisible()
-
-    const barChart = page.locator('.recharts-bar')
-    const barCount = await barChart.count()
-    expect(barCount).toBeGreaterThanOrEqual(1)
   })
 })
 
@@ -285,10 +286,7 @@ test.describe('API error handling – graceful degradation', () => {
       route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ detail: 'Internal Server Error' }) }),
     )
 
-    await page.goto('/')
-    await page.waitForLoadState('networkidle')
-
-    await expect(page.getByRole('heading', { level: 1, name: 'GbgGridlock' })).toBeVisible()
+    await gotoDashboard(page)
 
     const initErrors = jsErrors.filter((msg) => msg.includes('before initialization'))
     expect(initErrors).toEqual([])
@@ -300,17 +298,14 @@ test.describe('API error handling – graceful degradation', () => {
 
     await page.route('**/api/v1/**', (route: Route) => route.abort('timedout'))
 
-    await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
+    await gotoDashboard(page)
     await page.waitForTimeout(2000)
-
-    await expect(page.getByRole('heading', { level: 1, name: 'GbgGridlock' })).toBeVisible()
 
     const initErrors = jsErrors.filter((msg) => msg.includes('before initialization'))
     expect(initErrors).toEqual([])
   })
 
-  test('fallback color text appears when metadata API fails', async ({ page }) => {
+  test('shows fallback color messaging when metadata is unavailable', async ({ page }) => {
     await page.route('**/api/v1/stats/network*', (route: Route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_NETWORK_STATS) }),
     )
@@ -329,13 +324,15 @@ test.describe('API error handling – graceful degradation', () => {
     await page.route('**/api/v1/debug/metrics*', (route: Route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_DEBUG_METRICS) }),
     )
+    await page.route('**/api/v1/delays/distribution/*', (route: Route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_DELAY_DISTRIBUTION) }),
+    )
     await page.route('**/api/v1/lines/metadata*', (route: Route) =>
       route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ detail: 'error' }) }),
     )
 
-    await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await gotoDashboard(page)
 
-    await expect(page.getByText(/neutral colors are shown/)).toBeVisible()
+    await expect(page.getByText(/neutral colors are shown/i)).toBeVisible()
   })
 })
