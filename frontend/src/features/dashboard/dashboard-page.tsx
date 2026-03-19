@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AccentedButton } from '@/components/ui/accented-button'
 import { fetchDebugMetrics, fetchDelayDistribution, fetchHourlyTrend, fetchLineColors, fetchLineDetails, fetchMonitoredStops, fetchNetworkStats, fetchWorstLines } from '@/lib/api'
+import { formatHourForChart } from '@/lib/timezone'
 
 type LineMode = 'Tram' | 'Bus' | 'Ferry'
 
@@ -419,14 +420,9 @@ export function DashboardPage() {
                     tickLine={false}
                     axisLine={{ stroke: 'var(--border)' }}
                     tickFormatter={(value) => {
-                      const parts = value.split(' ')
-                      if (parts.length === 2) {
-                        const [date, time] = parts
-                        const hourlyData = hourlyTrendQuery.data ?? []
-                        const uniqueDates = new Set(hourlyData.map((d) => d.hour.split(' ')[0]))
-                        return uniqueDates.size > 1 ? `${date.substring(5)} ${time.substring(0, 5)}` : time.substring(0, 5)
-                      }
-                      return value
+                      const hourlyData = hourlyTrendQuery.data ?? []
+                      const uniqueDates = new Set(hourlyData.map((d) => new Date(d.hour).toISOString().split('T')[0]))
+                      return formatHourForChart(value, uniqueDates.size > 1)
                     }}
                   />
                   <YAxis 
@@ -454,7 +450,7 @@ export function DashboardPage() {
                       fontWeight: 600,
                       marginBottom: '4px'
                     }}
-                    labelFormatter={(value) => String(value).replace(' ', ' @ ')}
+                    labelFormatter={(value) => formatHourForChart(String(value), true)}
                   />
                   <Area type="monotone" dataKey="tram" name={translateMode('Tram')} stroke="var(--chart-1)" fill="url(#tramGradient)" strokeWidth={2.5} />
                   <Area type="monotone" dataKey="bus" name={translateMode('Bus')} stroke="var(--chart-2)" fill="url(#busGradient)" strokeWidth={2.5} />

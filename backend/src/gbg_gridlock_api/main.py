@@ -271,7 +271,7 @@ async def get_hourly_trend(window_hours: int = Query(default=24, ge=1, le=168)) 
         GROUP BY DATE_TRUNC('hour', recorded_at), m.transport_mode
     )
     SELECT 
-        TO_CHAR(hour_timestamp, 'YYYY-MM-DD HH24:MI') AS hour,
+        hour_timestamp AS hour,
         COALESCE(MAX(CASE WHEN LOWER(transport_mode) = 'tram' THEN avg_delay END), 0)::float AS tram,
         COALESCE(MAX(CASE WHEN LOWER(transport_mode) = 'bus' THEN avg_delay END), 0)::float AS bus,
         COALESCE(MAX(CASE WHEN LOWER(transport_mode) IN ('ferry', 'boat') THEN avg_delay END), 0)::float AS ferry
