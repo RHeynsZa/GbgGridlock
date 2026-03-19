@@ -45,6 +45,7 @@ The UI layer visualizing the transit pain points.
   * **UI Components:** Use `shadcn/ui` components structured with Tailwind CSS utility classes. Avoid writing custom CSS files.
   * **Data Flow:** Do not make any direct calls to the Västtrafik API from the browser. All data must flow exclusively through the FastAPI backend.
   * **Visualizations:** Charts (via Recharts or similar) must correctly handle and visualize right-skewed statistical distributions, as transit delays cannot drop below zero but can extend indefinitely.
+  * **UI/UX Design System:** The repository includes the UI/UX Pro Max skill (`.cursor/skills/ui-ux-pro-max/` and `.codex/skills/ui-ux-pro-max/`) which provides intelligent design system generation. When building UI components, the skill auto-activates with natural language requests. The GbgGridlock design system uses: Flat Design style, Indigo primary (#6366F1), Emerald CTA (#10B981), Fira Code/Sans typography, and WCAG AAA accessibility compliance. See `.cursor/skills/README.md` for usage details.
 
 ---
 
