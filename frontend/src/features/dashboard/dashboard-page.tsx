@@ -5,6 +5,7 @@ import { ArrowUpRight, BusFront, Languages, Moon, Ship, Sun, TramFront, Triangle
 import { useTranslation } from 'react-i18next'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { AccentedButton } from '@/components/ui/accented-button'
 import { fetchDebugMetrics, fetchDelayDistribution, fetchHourlyTrend, fetchLineColors, fetchLineDetails, fetchMonitoredStops, fetchNetworkStats, fetchWorstLines } from '@/lib/api'
 
 type LineMode = 'Tram' | 'Bus' | 'Ferry'
@@ -360,20 +361,26 @@ export function DashboardPage() {
                 <div className="space-y-1.5 sm:space-y-2">
                   <label className="text-xs font-medium text-foreground sm:text-sm">Transport Mode</label>
                   <div className="flex flex-col gap-1.5 sm:gap-2">
-                    {(['All', 'Tram', 'Bus'] as const).map((mode) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        className={`chip justify-center ${selectedMode === mode ? 'chip-active' : ''}`}
-                        onClick={() => {
-                          setSelectedMode(mode)
-                          setSelectedLine(null)
-                        }}
-                      >
-                        {getModeIcon(mode as LineMode)}
-                        <span>{translateMode(mode)}</span>
-                      </button>
-                    ))}
+                    {(['All', 'Tram', 'Bus'] as const).map((mode) => {
+                      const isSelected = selectedMode === mode
+                      return (
+                        <AccentedButton
+                          key={mode}
+                          type="button"
+                          variant={isSelected ? 'default' : 'outline'}
+                          size="md"
+                          accentColor="var(--primary)"
+                          onClick={() => {
+                            setSelectedMode(mode)
+                            setSelectedLine(null)
+                          }}
+                          className={`w-full justify-center ${isSelected ? 'border-border/50 shadow-md' : ''}`}
+                        >
+                          {getModeIcon(mode as LineMode)}
+                          <span>{translateMode(mode)}</span>
+                        </AccentedButton>
+                      )
+                    })}
                   </div>
                 </div>
               </CardContent>
@@ -471,7 +478,7 @@ export function DashboardPage() {
                 {lineDelayRanking.map((line, index) => {
                   const widthPercent = Math.max(10, Math.round((line.avgDelaySeconds / maxLineDelay) * 100))
                   return (
-                    <div key={line.line} className="group cursor-pointer">
+                    <div key={line.line} className="group cursor-pointer" data-testid="ranking-row">
                       <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg p-2 transition-colors hover:bg-muted/50 sm:gap-3">
                         <div className="flex items-center gap-1.5 sm:gap-2">
                           <span className="flex h-5 w-5 items-center justify-center rounded-md bg-muted text-[10px] font-bold text-muted-foreground sm:h-6 sm:w-6 sm:text-xs">
@@ -521,24 +528,24 @@ export function DashboardPage() {
             {filteredLines.length > 0 ? (
               <>
                 <div className="flex flex-wrap gap-2">
-                  {filteredLines.map((line) => (
-                    <button
-                      key={line.line}
-                      type="button"
-                      className={`chip flex items-center gap-1.5 ${selectedLine === line.line ? 'border-l-4' : ''}`}
-                      style={
-                        selectedLine === line.line
-                          ? {
-                              borderLeftColor: getLineStyle(line.line).backgroundColor,
-                            }
-                          : {}
-                      }
-                      onClick={() => setSelectedLine(line.line)}
-                    >
-                      {getModeIcon(line.mode)}
-                      <span>{line.line}</span>
-                    </button>
-                  ))}
+                  {filteredLines.map((line) => {
+                    const lineStyle = getLineStyle(line.line)
+                    const isSelected = selectedLine === line.line
+                    return (
+                      <AccentedButton
+                        key={line.line}
+                        type="button"
+                        accentColor={lineStyle.backgroundColor}
+                        variant={isSelected ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setSelectedLine(line.line)}
+                        className={isSelected ? 'border-border/50 shadow-md' : ''}
+                      >
+                        {getModeIcon(line.mode)}
+                        <span>{line.line}</span>
+                      </AccentedButton>
+                    )
+                  })}
                 </div>
 
                 {selectedLineStats ? (

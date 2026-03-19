@@ -175,10 +175,10 @@ test.describe('API integration – mocked backend responses', () => {
 
     await gotoDashboard(page)
 
-    const rankingRows = page.locator('.group.cursor-pointer')
+    const rankingRows = page.getByTestId('ranking-row')
     await expect(rankingRows).toHaveCount(4)
 
-    const lineLabels = rankingRows.locator('p.text-sm.font-semibold')
+    const lineLabels = rankingRows.locator('p.font-semibold')
     await expect(lineLabels.nth(0)).toHaveText('11')
     await expect(lineLabels.nth(1)).toHaveText('6')
     await expect(lineLabels.nth(2)).toHaveText('19')
