@@ -17,7 +17,6 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.execute("ALTER DATABASE gbggridlock SET timezone TO 'UTC'")
     op.execute("SET timezone TO 'UTC'")
 
 
