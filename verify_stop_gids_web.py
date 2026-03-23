@@ -3,7 +3,13 @@
 Script to verify stop GIDs by checking the Västtrafik website.
 This doesn't require API credentials.
 """
+import os
 import sys
+
+# Add backend to path to import monitored_stops
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "backend", "src"))
+
+from gbg_gridlock_api.monitored_stops import MONITORED_STOPS
 
 # Known stop names and their expected GIDs from Västtrafik website
 VASTTRAFIK_WEBSITE_GIDS = {
@@ -15,15 +21,8 @@ VASTTRAFIK_WEBSITE_GIDS = {
     # Redbergsplatsen: Could not verify via website, keeping current GID for now
 }
 
-# Current GIDs in our code
-CURRENT_GIDS = {
-    "Centralstationen": "9021014001760000",
-    "Redbergsplatsen": "9021014005650000",
-    "Korsvägen": "9021014002510000",
-    "Järntorget": "9021014003610000",
-    "Marklandsgatan": "9021014004490000",
-    "Hjalmar Brantingsplatsen": "9021014003100000",
-}
+# Current GIDs from monitored_stops.py
+CURRENT_GIDS = {stop.stop_name: stop.stop_gid for stop in MONITORED_STOPS}
 
 def main():
     print("=" * 80)
