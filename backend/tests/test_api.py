@@ -55,7 +55,7 @@ async def test_bottlenecks_endpoint_returns_schema_payload(monkeypatch):
     conn = FakeConn(
         rows=[
             {
-                "stop_gid": "9021014001760000",
+                "stop_gid": "9021014001950000",
                 "severe_or_cancelled_count": 12,
                 "total_departures": 34,
             }
@@ -69,7 +69,7 @@ async def test_bottlenecks_endpoint_returns_schema_payload(monkeypatch):
     assert response.status_code == 200
     assert response.json() == [
         {
-            "stop_gid": "9021014001760000",
+            "stop_gid": "9021014001950000",
             "severe_or_cancelled_count": 12,
             "total_departures": 34,
         }
@@ -134,13 +134,13 @@ async def test_delay_breakdown_by_stop_uses_stop_filter_when_provided(monkeypatc
     monkeypatch.setattr(main.db, "_pool", FakePool(conn))
 
     async with AsyncClient(transport=ASGITransport(app=main.app), base_url="http://test") as client:
-        response = await client.get("/api/v1/delays/by-stop", params={"window_minutes": 30, "stop_gid": "9021014001760000"})
+        response = await client.get("/api/v1/delays/by-stop", params={"window_minutes": 30, "stop_gid": "9021014001950000"})
 
     assert response.status_code == 200
     assert response.json() == [{"line_number": "16", "avg_delay_seconds": 111.1, "sample_size": 8, "transport_mode": "bus"}]
     assert len(conn.calls) == 1
     _, args = conn.calls[0]
-    assert args == (30, "9021014001760000")
+    assert args == (30, "9021014001950000")
 
 
 @pytest.mark.anyio
@@ -150,12 +150,12 @@ async def test_monitored_stops_endpoint_returns_human_readable_stop_names():
 
     assert response.status_code == 200
     assert response.json() == [
-        {"stop_gid": "9021014001760000", "stop_name": "Centralstationen"},
+        {"stop_gid": "9021014001950000", "stop_name": "Centralstationen"},
         {"stop_gid": "9021014005650000", "stop_name": "Redbergsplatsen"},
-        {"stop_gid": "9021014002510000", "stop_name": "Korsvägen"},
-        {"stop_gid": "9021014003610000", "stop_name": "Järntorget"},
-        {"stop_gid": "9021014004490000", "stop_name": "Marklandsgatan"},
-        {"stop_gid": "9021014003100000", "stop_name": "Hjalmar Brantingsplatsen"},
+        {"stop_gid": "9021014003980000", "stop_name": "Korsvägen"},
+        {"stop_gid": "9021014003640000", "stop_name": "Järntorget"},
+        {"stop_gid": "9021014004760000", "stop_name": "Marklandsgatan"},
+        {"stop_gid": "9021014003180000", "stop_name": "Hjalmar Brantingsplatsen"},
     ]
 
 
