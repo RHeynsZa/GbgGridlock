@@ -11,8 +11,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import Settings
 from .database import Database
 from .debug_metrics import get_snapshot
-from .monitored_stops import MONITORED_STOPS
+from .monitored_stops import MONITORED_STOP_NAMES
 from .schemas import BottleneckStop, DebugMetrics, DelayDistributionBucket, HourlyTrendPoint, LineDetail, LineMetadata, MonitoredStop, NetworkStats, WorstLine
+from .stop_resolver import get_monitored_stops as get_monitored_stops_from_db, resolve_and_store_stops
 from .vasttrafik_client import VasttrafikClient
 from .worker import fetch_line_metadata_once, run_poll_cycle
 
@@ -48,6 +49,11 @@ async def lifespan(app: FastAPI):
                 client_secret=settings.vt_client_secret,
                 auth_key=settings.vt_auth_key,
             )
+            
+            # Resolve and store monitored stops
+            logger.info("Resolving monitored stop GIDs from Västtrafik API...")
+            resolved_stops = await resolve_and_store_stops(vt_client, db.pool, MONITORED_STOP_NAMES)
+            logger.info(f"Resolved {len(resolved_stops)} monitored stops")
             
             await fetch_line_metadata_once(db.pool, vt_client, settings.worker_http_concurrency)
             
@@ -147,7 +153,9 @@ async def get_delay_breakdown_by_stop(
 
 @app.get("/api/v1/stops/monitored", response_model=list[MonitoredStop])
 async def get_monitored_stops() -> list[MonitoredStop]:
-    return [MonitoredStop(stop_gid=stop.stop_gid, stop_name=stop.stop_name) for stop in MONITORED_STOPS]
+    async with db.pool.acquire() as conn:
+        resolved_stops = await get_monitored_stops_from_db(conn)
+    return [MonitoredStop(stop_gid=stop.stop_gid, stop_name=stop.stop_name) for stop in resolved_stops]
 
 
 @app.get("/api/v1/delays/distribution/{line_number}", response_model=list[DelayDistributionBucket])
@@ -313,5 +321,7 @@ async def get_line_details(window_minutes: int = Query(default=60, ge=5, le=1008
 
 @app.get("/api/v1/debug/metrics", response_model=DebugMetrics)
 async def get_debug_metrics() -> DebugMetrics:
-    snapshot = get_snapshot(monitored_stops_count=len(MONITORED_STOPS))
+    async with db.pool.acquire() as conn:
+        monitored_stops = await get_monitored_stops_from_db(conn)
+    snapshot = get_snapshot(monitored_stops_count=len(monitored_stops))
     return DebugMetrics(**snapshot)

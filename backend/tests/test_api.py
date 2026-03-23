@@ -144,7 +144,21 @@ async def test_delay_breakdown_by_stop_uses_stop_filter_when_provided(monkeypatc
 
 
 @pytest.mark.anyio
-async def test_monitored_stops_endpoint_returns_human_readable_stop_names():
+async def test_monitored_stops_endpoint_returns_human_readable_stop_names(monkeypatch):
+    from datetime import datetime, timezone
+    
+    conn = FakeConn(
+        rows=[
+            {"stop_name": "Centralstationen", "stop_gid": "9021014001950000", "last_verified_at": datetime.now(timezone.utc)},
+            {"stop_name": "Redbergsplatsen", "stop_gid": "9021014005650000", "last_verified_at": datetime.now(timezone.utc)},
+            {"stop_name": "Korsvägen", "stop_gid": "9021014003980000", "last_verified_at": datetime.now(timezone.utc)},
+            {"stop_name": "Järntorget", "stop_gid": "9021014003640000", "last_verified_at": datetime.now(timezone.utc)},
+            {"stop_name": "Marklandsgatan", "stop_gid": "9021014004760000", "last_verified_at": datetime.now(timezone.utc)},
+            {"stop_name": "Hjalmar Brantingsplatsen", "stop_gid": "9021014003180000", "last_verified_at": datetime.now(timezone.utc)},
+        ]
+    )
+    monkeypatch.setattr(main.db, "_pool", FakePool(conn))
+    
     async with AsyncClient(transport=ASGITransport(app=main.app), base_url="http://test") as client:
         response = await client.get("/api/v1/stops/monitored")
 
@@ -176,6 +190,17 @@ async def test_cors_preflight_allows_github_pages_origin():
 
 @pytest.mark.anyio
 async def test_debug_metrics_endpoint_returns_live_snapshot(monkeypatch):
+    from datetime import datetime, timezone
+    
+    # Mock the database call for monitored stops
+    conn = FakeConn(
+        rows=[
+            {"stop_name": f"Stop{i}", "stop_gid": f"902101400{i:07d}", "last_verified_at": datetime.now(timezone.utc)}
+            for i in range(6)
+        ]
+    )
+    monkeypatch.setattr(main.db, "_pool", FakePool(conn))
+    
     monkeypatch.setattr(
         main,
         "get_snapshot",

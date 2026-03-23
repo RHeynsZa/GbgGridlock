@@ -11,13 +11,12 @@ import httpx
 from .worker_models import DepartureDelayEvent, LineMetadata
 from .worker_repository import insert_events, upsert_line_metadata
 from .vasttrafik_client import VasttrafikClient
-from .monitored_stops import MONITORED_STOP_AREA_GIDS
+from .stop_resolver import get_monitored_stops
 from .debug_metrics import record_poll_cycle, record_poll_request
 
 logger = logging.getLogger(__name__)
 
 
-TARGET_STOP_AREA_GIDS = list(MONITORED_STOP_AREA_GIDS)
 ALLOWED_TRANSPORT_MODES = {"tram", "bus", "ferry", "boat"}
 
 
@@ -143,6 +142,16 @@ def _extract_line_metadata(payload: dict) -> list[LineMetadata]:
 
 async def fetch_line_metadata_once(pool: asyncpg.Pool, vt_client: VasttrafikClient, http_concurrency: int) -> None:
     semaphore = asyncio.Semaphore(http_concurrency)
+    
+    # Get monitored stops from database
+    async with pool.acquire() as conn:
+        monitored_stops = await get_monitored_stops(conn)
+    
+    if not monitored_stops:
+        logger.warning("No monitored stops found in database")
+        return
+    
+    stop_gids = [stop.stop_gid for stop in monitored_stops]
 
     async with httpx.AsyncClient() as http_client:
         async def fetch_metadata_for_stop(stop_gid: str) -> list[LineMetadata]:
@@ -154,7 +163,7 @@ async def fetch_line_metadata_once(pool: asyncpg.Pool, vt_client: VasttrafikClie
                     logger.warning("metadata fetch failed for stop %s: %s", stop_gid, exc)
                     return []
 
-        result_sets = await asyncio.gather(*(fetch_metadata_for_stop(stop_gid) for stop_gid in TARGET_STOP_AREA_GIDS))
+        result_sets = await asyncio.gather(*(fetch_metadata_for_stop(stop_gid) for stop_gid in stop_gids))
 
     all_lines = [item for line_list in result_sets for item in line_list]
 
@@ -167,6 +176,16 @@ async def fetch_line_metadata_once(pool: asyncpg.Pool, vt_client: VasttrafikClie
 async def run_poll_cycle(pool: asyncpg.Pool, vt_client: VasttrafikClient, http_concurrency: int) -> None:
     semaphore = asyncio.Semaphore(http_concurrency)
     recorded_at = datetime.now(timezone.utc)
+    
+    # Get monitored stops from database
+    async with pool.acquire() as conn:
+        monitored_stops = await get_monitored_stops(conn)
+    
+    if not monitored_stops:
+        logger.warning("No monitored stops found in database")
+        return
+    
+    stop_gids = [stop.stop_gid for stop in monitored_stops]
 
     async with httpx.AsyncClient() as http_client:
         async def fetch_for_stop(stop_gid: str) -> tuple[list[DepartureDelayEvent], bool]:
@@ -183,7 +202,7 @@ async def run_poll_cycle(pool: asyncpg.Pool, vt_client: VasttrafikClient, http_c
                     logger.warning("poll failed for stop %s: %s", stop_gid, exc)
                     return [], False
 
-        result_sets = await asyncio.gather(*(fetch_for_stop(stop_gid) for stop_gid in TARGET_STOP_AREA_GIDS))
+        result_sets = await asyncio.gather(*(fetch_for_stop(stop_gid) for stop_gid in stop_gids))
 
     events = [item for event_list, _ in result_sets for item in event_list]
     successful_stops = sum(1 for _, success in result_sets if success)

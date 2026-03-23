@@ -548,6 +548,14 @@ class TestPollCycleIntegration:
             async def executemany(self, sql: str, rows):
                 for row in rows:
                     inserted_events.append(row)
+            
+            async def fetch(self, sql: str):
+                # Mock get_monitored_stops query
+                from datetime import datetime, timezone
+                return [
+                    {"stop_name": "Centralstationen", "stop_gid": "9021014001760000", "last_verified_at": datetime.now(timezone.utc)},
+                    {"stop_name": "Korsvägen", "stop_gid": "9021014002510000", "last_verified_at": datetime.now(timezone.utc)},
+                ]
         
         class FakePool:
             async def __aenter__(self):
@@ -567,11 +575,6 @@ class TestPollCycleIntegration:
                 pass
         
         fake_pool = FakePool()
-        
-        monkeypatch.setattr(
-            "gbg_gridlock_api.worker.TARGET_STOP_AREA_GIDS",
-            ["9021014001760000", "9021014002510000"]
-        )
         
         await run_poll_cycle(fake_pool, mock_vt_client, http_concurrency=5)
         
@@ -610,6 +613,14 @@ class TestPollCycleIntegration:
             async def executemany(self, sql: str, rows):
                 for row in rows:
                     inserted_events.append(row)
+            
+            async def fetch(self, sql: str):
+                # Mock get_monitored_stops query
+                from datetime import datetime, timezone
+                return [
+                    {"stop_name": "Centralstationen", "stop_gid": "9021014001760000", "last_verified_at": datetime.now(timezone.utc)},
+                    {"stop_name": "Korsvägen", "stop_gid": "9021014002510000", "last_verified_at": datetime.now(timezone.utc)},
+                ]
         
         class FakePool:
             async def __aenter__(self):
@@ -629,11 +640,6 @@ class TestPollCycleIntegration:
                 pass
         
         fake_pool = FakePool()
-        
-        monkeypatch.setattr(
-            "gbg_gridlock_api.worker.TARGET_STOP_AREA_GIDS",
-            ["9021014001760000", "9021014002510000"]
-        )
         
         await run_poll_cycle(fake_pool, mock_vt_client, http_concurrency=5)
         
@@ -675,6 +681,14 @@ class TestPollCycleIntegration:
             async def executemany(self, sql: str, rows):
                 for row in rows:
                     upserted_lines.append(row)
+            
+            async def fetch(self, sql: str):
+                # Mock get_monitored_stops query
+                from datetime import datetime, timezone
+                return [
+                    {"stop_name": "Centralstationen", "stop_gid": "9021014001760000", "last_verified_at": datetime.now(timezone.utc)},
+                    {"stop_name": "Korsvägen", "stop_gid": "9021014002510000", "last_verified_at": datetime.now(timezone.utc)},
+                ]
         
         class FakePool:
             async def __aenter__(self):
@@ -694,11 +708,6 @@ class TestPollCycleIntegration:
                 pass
         
         fake_pool = FakePool()
-        
-        monkeypatch.setattr(
-            "gbg_gridlock_api.worker.TARGET_STOP_AREA_GIDS",
-            ["9021014001760000", "9021014002510000"]
-        )
         
         await fetch_line_metadata_once(fake_pool, mock_vt_client, http_concurrency=5)
         
@@ -739,6 +748,15 @@ class TestPollCycleIntegration:
             async def executemany(self, sql: str, rows):
                 for row in rows:
                     upserted_lines.append(row)
+            
+            async def fetch(self, sql: str):
+                # Mock get_monitored_stops query
+                from datetime import datetime, timezone
+                return [
+                    {"stop_name": "Centralstationen", "stop_gid": "9021014001760000", "last_verified_at": datetime.now(timezone.utc)},
+                    {"stop_name": "Korsvägen", "stop_gid": "9021014002510000", "last_verified_at": datetime.now(timezone.utc)},
+                    {"stop_name": "Järntorget", "stop_gid": "9021014003610000", "last_verified_at": datetime.now(timezone.utc)},
+                ]
         
         class FakePool:
             async def __aenter__(self):
@@ -758,11 +776,6 @@ class TestPollCycleIntegration:
                 pass
         
         fake_pool = FakePool()
-        
-        monkeypatch.setattr(
-            "gbg_gridlock_api.worker.TARGET_STOP_AREA_GIDS",
-            ["9021014001760000", "9021014002510000", "9021014003610000"]
-        )
         
         await fetch_line_metadata_once(fake_pool, mock_vt_client, http_concurrency=5)
         
