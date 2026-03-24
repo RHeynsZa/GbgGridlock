@@ -169,7 +169,21 @@ export function DashboardPage() {
   }, [lineDetailsQuery.data])
 
   const filteredLines = useMemo(
-    () => lineDrilldown.filter((line) => (selectedMode === 'All' ? true : line.mode === selectedMode)),
+    () => lineDrilldown
+      .filter((line) => (selectedMode === 'All' ? true : line.mode === selectedMode))
+      .sort((a, b) => {
+        const aNum = parseInt(a.line, 10)
+        const bNum = parseInt(b.line, 10)
+        
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+          return aNum - bNum
+        }
+        
+        if (!isNaN(aNum)) return -1
+        if (!isNaN(bNum)) return 1
+        
+        return a.line.localeCompare(b.line)
+      }),
     [selectedMode, lineDrilldown],
   )
 
