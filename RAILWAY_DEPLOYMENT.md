@@ -41,10 +41,11 @@ Add the following environment variables to your Railway service:
 Railway will automatically detect the `railway.toml` configuration file and:
 
 1. Install system dependencies (including curl)
-2. Install `uv` and sync backend dependencies from `backend/pyproject.toml`
+2. Install `uv` and sync backend dependencies from `backend/pyproject.toml` using a frozen lockfile (`uv sync --frozen --no-dev`)
 3. **Run database migrations automatically** before starting the service
 4. Start the FastAPI application with `uv run uvicorn`
 5. Enable health checks at `/health`
+6. Build with Python 3.12 (`NIXPACKS_PYTHON_VERSION=3.12`)
 
 ## How Migrations Work
 

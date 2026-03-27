@@ -1,6 +1,6 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "apt-get update && apt-get install -y curl postgresql-client && curl -LsSf https://astral.sh/uv/install.sh | sh && export PATH=\"$HOME/.local/bin:$PATH\" && cd backend && uv sync"
+buildCommand = "apt-get update && apt-get install -y curl postgresql-client && curl -LsSf https://astral.sh/uv/install.sh | sh && export PATH=\"$HOME/.local/bin:$PATH\" && cd backend && uv sync --frozen --no-dev"
 
 [deploy]
 preDeployCommand = ["export PATH=\"$HOME/.local/bin:$PATH\" && cd backend && uv run alembic upgrade head"]
@@ -9,3 +9,6 @@ healthcheckPath = "/health"
 healthcheckTimeout = 100
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
+
+[variables]
+NIXPACKS_PYTHON_VERSION = "3.12"
