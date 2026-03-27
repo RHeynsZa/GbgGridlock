@@ -28,6 +28,12 @@ export type MonitoredStop = {
   stop_name: string
 }
 
+export type BottleneckStop = {
+  stop_gid: string
+  severe_or_cancelled_count: number
+  total_departures: number
+}
+
 export type DebugMetrics = {
   window_minutes: number
   monitored_stops_count: number
@@ -71,6 +77,7 @@ export type DelayDistributionBucket = {
 
 type WorstLinesResponse = WorstLine[] | { rows?: WorstLine[]; data?: WorstLine[] }
 type MonitoredStopsResponse = MonitoredStop[] | { rows?: MonitoredStop[]; data?: MonitoredStop[] }
+type BottlenecksResponse = BottleneckStop[] | { rows?: BottleneckStop[]; data?: BottleneckStop[] }
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? 'https://gbggridlock-production.up.railway.app',
@@ -109,6 +116,22 @@ function normalizeMonitoredStops(payload: MonitoredStopsResponse): MonitoredStop
   return []
 }
 
+function normalizeBottlenecks(payload: BottlenecksResponse): BottleneckStop[] {
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
+  if (Array.isArray(payload.rows)) {
+    return payload.rows
+  }
+
+  if (Array.isArray(payload.data)) {
+    return payload.data
+  }
+
+  return []
+}
+
 export async function fetchWorstLines(stopGid?: string, windowMinutes: number = 60) {
   try {
     const params: Record<string, string | number> = { window_minutes: windowMinutes }
@@ -129,6 +152,21 @@ export async function fetchMonitoredStops() {
     return normalizeMonitoredStops(data)
   } catch (error) {
     console.warn('Failed to fetch monitored stops from backend:', error)
+    return []
+  }
+}
+
+export async function fetchBottlenecks(windowMinutes: number = 1440, limit: number = 10) {
+  try {
+    const { data } = await api.get<BottlenecksResponse>('/api/v1/stops/bottlenecks', {
+      params: {
+        window_minutes: windowMinutes,
+        limit,
+      },
+    })
+    return normalizeBottlenecks(data)
+  } catch (error) {
+    console.warn('Failed to fetch bottlenecks from backend:', error)
     return []
   }
 }

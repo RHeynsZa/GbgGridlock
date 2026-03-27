@@ -17,6 +17,7 @@ test.describe('API integration – real backend', () => {
     await expect(page.getByText('Network Overview')).toBeVisible()
     await expect(page.getByText('Control panel')).toBeVisible()
     await expect(page.getByText('Delay ranking')).toBeVisible()
+    await expect(page.getByText('Bottleneck stops')).toBeVisible()
 
     const initErrors = jsErrors.filter((msg) => msg.includes('before initialization'))
     expect(initErrors).toEqual([])
@@ -70,6 +71,20 @@ test.describe('API integration – real backend', () => {
     await gotoDashboard(page)
 
     await expect(page.getByText('System Diagnostics')).toBeVisible()
+  })
+
+  test('bottleneck section renders list or empty state without crashing', async ({ page }) => {
+    await gotoDashboard(page)
+
+    await expect(page.getByText('Bottleneck stops')).toBeVisible()
+
+    const rows = page.locator('text=/\\d+\\s*\\/\\s*\\d+/')
+    const emptyState = page.getByText(/No bottleneck data available|Loading bottleneck data/i)
+
+    const hasRows = await rows.count()
+    if (hasRows === 0) {
+      await expect(emptyState).toBeVisible()
+    }
   })
 
   test('drilldown panel responds to mode selection', async ({ page }) => {

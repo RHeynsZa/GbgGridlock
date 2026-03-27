@@ -7,7 +7,7 @@ import { DateTime } from 'luxon'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AccentedButton } from '@/components/ui/accented-button'
-import { fetchDebugMetrics, fetchDelayDistribution, fetchHourlyTrend, fetchLineColors, fetchLineDetails, fetchMonitoredStops, fetchNetworkStats, fetchWorstLines } from '@/lib/api'
+import { fetchBottlenecks, fetchDebugMetrics, fetchDelayDistribution, fetchHourlyTrend, fetchLineColors, fetchLineDetails, fetchMonitoredStops, fetchNetworkStats, fetchWorstLines } from '@/lib/api'
 import { formatHourForChart } from '@/lib/timezone'
 
 type LineMode = 'Tram' | 'Bus' | 'Ferry'
@@ -126,6 +126,10 @@ export function DashboardPage() {
     queryKey: ['line-details', timeRange.minutes],
     queryFn: () => fetchLineDetails(timeRange.minutes),
   })
+  const bottlenecksQuery = useQuery({
+    queryKey: ['bottlenecks', timeRange.minutes],
+    queryFn: () => fetchBottlenecks(timeRange.minutes, 10),
+  })
 
   const delayDistributionQuery = useQuery({
     queryKey: ['delay-distribution', selectedLine, timeRange.minutes],
@@ -219,6 +223,24 @@ export function DashboardPage() {
 
     return [...lineDrilldown].sort((a, b) => b.avgDelaySeconds - a.avgDelaySeconds)
   }, [worstLinesQuery.data])
+
+  const monitoredStopsByGid = useMemo(() => {
+    return new Map((monitoredStopsQuery.data ?? []).map((stop) => [stop.stop_gid, stop.stop_name]))
+  }, [monitoredStopsQuery.data])
+
+  const bottlenecks = useMemo(() => {
+    return (bottlenecksQuery.data ?? []).map((item) => {
+      const disruptionRate = item.total_departures > 0
+        ? (item.severe_or_cancelled_count / item.total_departures) * 100
+        : 0
+
+      return {
+        ...item,
+        stopName: monitoredStopsByGid.get(item.stop_gid) ?? item.stop_gid,
+        disruptionRate,
+      }
+    })
+  }, [bottlenecksQuery.data, monitoredStopsByGid])
 
   const delayDistributionData = useMemo(() => {
     const buckets = delayDistributionQuery.data || []
@@ -555,6 +577,60 @@ export function DashboardPage() {
             ) : (
               <div className="flex h-32 items-center justify-center text-muted-foreground">
                 <p className="text-sm">No ranking data available</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-xl shadow-md">
+          <CardHeader className="pb-3 sm:pb-6">
+            <CardTitle className="text-sm sm:text-base">{t('bottlenecks.title')}</CardTitle>
+            <CardDescription className="text-xs">{t('bottlenecks.description')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 sm:space-y-3">
+            {bottlenecks.length > 0 ? (
+              <>
+                {bottlenecks.map((stop, index) => {
+                  const widthPercent = Math.max(8, Math.min(100, Math.round(stop.disruptionRate)))
+                  return (
+                    <div key={stop.stop_gid} className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg p-2 hover:bg-muted/50 sm:gap-3">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-bold text-muted-foreground">
+                          {index + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-semibold sm:text-sm">{stop.stopName}</p>
+                          <p className="text-[10px] text-muted-foreground sm:text-xs">{stop.stop_gid}</p>
+                        </div>
+                      </div>
+                      <div className="relative h-8 overflow-hidden rounded-lg bg-muted sm:h-10">
+                        <div
+                          className="flex h-full items-center justify-end rounded-lg bg-warning/20 px-2"
+                          style={{ width: `${widthPercent}%` }}
+                        >
+                          <span className="text-[10px] font-semibold text-foreground sm:text-xs">
+                            {Math.round(stop.disruptionRate)}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right text-[10px] tabular-nums sm:text-xs">
+                        <p className="font-semibold">{stop.severe_or_cancelled_count}</p>
+                        <p className="text-muted-foreground">/ {stop.total_departures}</p>
+                      </div>
+                    </div>
+                  )
+                })}
+                <div className="rounded-lg bg-muted/30 p-2 sm:p-3">
+                  <p className="text-[10px] text-muted-foreground sm:text-xs">
+                    {t('bottlenecks.footnote')}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <div className="flex h-24 items-center justify-center rounded-lg border border-dashed border-border">
+                <p className="text-sm text-muted-foreground">
+                  {bottlenecksQuery.isLoading ? t('bottlenecks.loading') : t('bottlenecks.empty')}
+                </p>
               </div>
             )}
           </CardContent>

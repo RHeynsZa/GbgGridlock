@@ -57,6 +57,13 @@ const resources = {
         cancellations: 'Canceled trips',
         empty: 'No lines available for this filter.',
       },
+      bottlenecks: {
+        title: 'Bottleneck stops',
+        description: 'Stops with the highest severe-delay or cancellation pressure in the selected window.',
+        footnote: 'Bars show disruption rate (% of severe delays or cancellations). The right metric shows severe/cancelled departures over total departures.',
+        loading: 'Loading bottleneck data...',
+        empty: 'No bottleneck data available for this window.',
+      },
     },
   },
   sv: {
@@ -113,6 +120,13 @@ const resources = {
         crowding: 'Trängselindex',
         cancellations: 'Inställda turer',
         empty: 'Inga linjer tillgängliga för detta filter.',
+      },
+      bottlenecks: {
+        title: 'Flaskhalshållplatser',
+        description: 'Hållplatser med högst tryck av allvarliga förseningar eller inställda avgångar i valt tidsfönster.',
+        footnote: 'Staplar visar störningsgrad (% allvarliga förseningar eller inställningar). Högerkolumnen visar allvarliga/inställda avgångar av totalt antal avgångar.',
+        loading: 'Laddar flaskhalsdata...',
+        empty: 'Ingen flaskhalsdata tillgänglig för valt tidsfönster.',
       },
     },
   },
