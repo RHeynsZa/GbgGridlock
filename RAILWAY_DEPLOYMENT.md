@@ -33,7 +33,7 @@ Add the following environment variables to your Railway service:
 
 **Optional (Worker Configuration):**
 - `ENABLE_WORKER` - Set to `true` to enable background polling (default: `false`)
-- `WORKER_INTERVAL_SECONDS` - Polling interval in seconds (default: `60`)
+- `WORKER_INTERVAL_SECONDS` - Polling interval in seconds (default: `300`)
 - `WORKER_HTTP_CONCURRENCY` - Max concurrent API requests (default: `5`)
 
 ### 4. Deploy
@@ -90,7 +90,7 @@ The integrated polling worker is **disabled by default** to conserve resources. 
 3. Redeploy the service
 
 When enabled, the worker will:
-- Poll Västtrafik API every 60 seconds (configurable)
+- Poll Västtrafik API every 5 minutes (300 seconds, configurable)
 - Store delay data in the TimescaleDB database
 - Run within the same process as the FastAPI server
 

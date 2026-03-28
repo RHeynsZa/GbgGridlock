@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     vt_auth_key: str = Field(default="", validation_alias=AliasChoices("VT_AUTH_KEY", "VT_SUBSCRIPTION_KEY"))
     vt_token_url: str = "https://ext-api.vasttrafik.se/token"
     vt_api_base_url: str = "https://ext-api.vasttrafik.se/pr/v4"
-    worker_interval_seconds: int = 60
+    worker_interval_seconds: int = 300
     worker_http_concurrency: int = 5
     cors_allowed_origins: list[str] = [
         "https://rheynsza.github.io",
