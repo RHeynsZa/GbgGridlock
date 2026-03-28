@@ -98,5 +98,5 @@ The frontend smoke test runs against the built preview app, so running only `npm
 ## Notes
 
 - The backend includes an integrated polling worker that uses OAuth2 client credentials and caches tokens until near expiry.
-- Polling is every 60 seconds with an `asyncio.Semaphore(5)` concurrency guard.
+- Polling is every 5 minutes (300 seconds) with an `asyncio.Semaphore(5)` concurrency guard.
 - Stop-area polling targets are maintained in `backend/src/gbg_gridlock_api/monitored_stops.py`.
