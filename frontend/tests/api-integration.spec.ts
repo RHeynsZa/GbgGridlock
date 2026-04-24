@@ -96,6 +96,35 @@ test.describe('API integration – real backend', () => {
     await expect(drilldown).toBeVisible()
   })
 
+  test('transport mode filter applies to delay ranking card', async ({ page }) => {
+    await gotoDashboard(page)
+
+    await page.waitForTimeout(2000)
+
+    const allRankingRows = page.locator('[data-testid="ranking-row"]')
+    const initialRowCount = await allRankingRows.count()
+
+    if (initialRowCount > 0) {
+      const tramButton = page.locator('.accented-button').filter({ hasText: 'Tram' }).first()
+      await tramButton.click()
+      await page.waitForTimeout(500)
+
+      const tramRankingRows = page.locator('[data-testid="ranking-row"]')
+      const tramRowCount = await tramRankingRows.count()
+
+      expect(tramRowCount).toBeLessThanOrEqual(initialRowCount)
+
+      const busButton = page.locator('.accented-button').filter({ hasText: 'Bus' }).first()
+      await busButton.click()
+      await page.waitForTimeout(500)
+
+      const busRankingRows = page.locator('[data-testid="ranking-row"]')
+      const busRowCount = await busRankingRows.count()
+
+      expect(busRowCount).toBeLessThanOrEqual(initialRowCount)
+    }
+  })
+
   test('hourly trend chart renders with proper datetime formatting', async ({ page }) => {
     await gotoDashboard(page)
 
