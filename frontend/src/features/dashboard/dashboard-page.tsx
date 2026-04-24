@@ -211,18 +211,23 @@ export function DashboardPage() {
   }, [lineColorsQuery.data])
 
   const lineDelayRanking = useMemo(() => {
+    let ranking = []
+    
     if (worstLinesQuery.data && worstLinesQuery.data.length > 0) {
-      return [...worstLinesQuery.data]
+      ranking = [...worstLinesQuery.data]
         .map((line) => ({
           line: line.line_number,
           mode: mapTransportModeToLineMode(line.transport_mode),
           avgDelaySeconds: Math.round(line.avg_delay_seconds),
         }))
-        .sort((a, b) => b.avgDelaySeconds - a.avgDelaySeconds)
+    } else {
+      ranking = [...lineDrilldown]
     }
-
-    return [...lineDrilldown].sort((a, b) => b.avgDelaySeconds - a.avgDelaySeconds)
-  }, [worstLinesQuery.data])
+    
+    return ranking
+      .filter((line) => (selectedMode === 'All' ? true : line.mode === selectedMode))
+      .sort((a, b) => b.avgDelaySeconds - a.avgDelaySeconds)
+  }, [worstLinesQuery.data, lineDrilldown, selectedMode])
 
   const monitoredStopsByGid = useMemo(() => {
     return new Map((monitoredStopsQuery.data ?? []).map((stop) => [stop.stop_gid, stop.stop_name]))
